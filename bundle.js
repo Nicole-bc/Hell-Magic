@@ -29137,10 +29137,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
   function getSpellEffects() {
     return spellEffects;
   }
-  function isMagicItem(item) {
-    if (!item) return false;
-    return MAGIC_ITEMS.includes(item?.Asset?.Name);
-  }
   function allowSpellCast(sourceCharacter, targetCharacter, spell) {
     if (!ServerChatRoomGetAllowItem(sourceCharacter, targetCharacter)) {
       return {
