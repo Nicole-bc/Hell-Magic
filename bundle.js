@@ -12,6 +12,8 @@
       throw mod = 0, e2;
     }
   };
+  //Arriba españa
+
   var __copyProps = (to, from, except, desc) => {
     if (from && typeof from === "object" || typeof from === "function") {
       for (let key of __getOwnPropNames(from))
