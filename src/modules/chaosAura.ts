@@ -1,0 +1,281 @@
+import { getNickname, getPlayer, getRandomNumber, waitFor } from "zois-core";
+import { type ModStorage, modStorage, syncStorage } from "./storage";
+import { messagesManager } from "zois-core/messaging";
+import { isBody, isCloth } from "zois-core/wardrobe";
+import { findModByName, getLoadedMods, hookFunction, HookPriority } from "zois-core/modsApi";
+import { isLSCGSpellBeneficial, shouldSpellBounceBack } from "./darkMagic";
+
+const chaosAuraLastData = {
+    appearance: null,
+    pose: null
+};
+
+type ChaosAuraTrigger = keyof NonNullable<NonNullable<ModStorage["chaosAura"]>["triggers"]>;
+
+// Runtime-only suppression: a successful "shatter" from another player drops the
+// aura for a short window. An unbreakable aura ignores this entirely (immune).
+let auraSuppressedUntil = 0;
+export function suppressChaosAura(ms: number): void {
+    if (modStorage.chaosAura?.unbreakable) return; // indestructible: cannot be shattered
+    auraSuppressedUntil = Math.max(auraSuppressedUntil, Date.now() + ms);
+}
+
+// The aura counts as active if it is enabled OR marked unbreakable.
+// Because this never reads `enabled` alone, an unbreakable aura stays up even if
+// something tries to flip `enabled` to false (a "shatter" attempt cannot stick).
+export function isChaosAuraActive(): boolean {
+    if (modStorage.chaosAura?.unbreakable) return true;      // immune to shatter
+    if (Date.now() < auraSuppressedUntil) return false;       // currently shattered
+    return !!modStorage.chaosAura?.enabled;
+}
+
+// An unbreakable aura forces every trigger on regardless of the individual toggles.
+export function isChaosAuraTriggerActive(trigger: ChaosAuraTrigger): boolean {
+    if (modStorage.chaosAura?.unbreakable) return true;
+    return !!modStorage.chaosAura?.triggers?.[trigger];
+}
+
+export function updateChaosAuraLastData() {
+    chaosAuraLastData.appearance = ServerAppearanceBundle(
+        Player.Appearance
+    );
+    chaosAuraLastData.pose = [...Player.ActivePose];
+}
+
+async function skyShieldAction(target: Character) {
+    const appearance1 = chaosAuraLastData.appearance;
+    const activePose1 = chaosAuraLastData.pose;
+    const appearance2 = ServerAppearanceBundle(Player.Appearance);
+    const activePose2 = Player.ActivePose;
+    let newAppearance = [...appearance2];
+    let newActivePose = [...activePose2];
+    const targetStorage = target.IsPlayer() ? modStorage : target.BCC;
+
+    const itemsFilter = (item: ItemBundle) => item.Group.startsWith("Item");
+    const noItemsFilter = (item: ItemBundle) => !item.Group.startsWith("Item");
+
+    const restraintsFilter = (item: ItemBundle) => InventoryGet(Player, item.Group)?.Asset?.IsRestraint;
+    const noRestraintsFilter = (item: ItemBundle) => !InventoryGet(Player, item.Group)?.Asset?.IsRestraint;
+
+    const clothesFilter = (item: ItemBundle) => isCloth(ServerBundledItemToAppearanceItem(Player.AssetFamily, item));
+    const noClothesFilter = (item: ItemBundle) => isBody(ServerBundledItemToAppearanceItem(Player.AssetFamily, item));
+
+    let triggered = false;
+
+    if (!modStorage.chaosAura?.whiteList?.includes(target.MemberNumber)) {
+        if (isChaosAuraTriggerActive("clothesChange")) {
+            if (
+                JSON.stringify(
+                    appearance2.filter(clothesFilter)
+                ) !==
+                JSON.stringify(
+                    appearance1.filter(clothesFilter)
+                )
+            ) {
+                newAppearance = newAppearance
+                    .filter(noClothesFilter)
+                    .concat(appearance1.filter(clothesFilter));
+                triggered = true;
+            }
+        }
+        if (isChaosAuraTriggerActive("itemsChange")) {
+            if (modStorage.chaosAura?.ignoreItemsChangeIfNotRestraint) {
+                if (
+                    JSON.stringify(
+                        appearance2.filter(restraintsFilter)
+                    ) !==
+                    JSON.stringify(
+                        appearance1.filter(restraintsFilter)
+                    )
+                ) {
+                    newAppearance = newAppearance
+                        .filter(noRestraintsFilter)
+                        .concat(appearance1.filter(restraintsFilter));
+                    triggered = true;
+                }
+            } else {
+                if (
+                    JSON.stringify(
+                        appearance2.filter(itemsFilter)
+                    ) !==
+                    JSON.stringify(
+                        appearance1.filter(itemsFilter)
+                    )
+                ) {
+                    newAppearance = newAppearance
+                        .filter(noItemsFilter)
+                        .concat(appearance1.filter(itemsFilter));
+                    triggered = true;
+                }
+            }
+        }
+        if (isChaosAuraTriggerActive("poseChange")) {
+            if (
+                JSON.stringify(
+                    activePose1
+                ) !==
+                JSON.stringify(
+                    activePose2
+                )
+            ) {
+                newActivePose = activePose1;
+                triggered = true;
+            }
+        }
+
+        if (triggered) {
+            modStorage.chaosAura.triggersCount ??= 0;
+            modStorage.chaosAura.triggersCount++;
+            syncStorage();
+            ServerSend("ChatRoomCharacterUpdate", {
+                ID: Player.OnlineID,
+                ActivePose: newActivePose,
+                Appearance: newAppearance
+            });
+            //FBC GLITCH FIX
+            setTimeout(() => ServerSend("ChatRoomCharacterPoseUpdate", { Pose: newActivePose }), 500);
+            messagesManager.sendAction(
+                `${getNickname(target)} tried to touch ${getNickname(
+                    Player
+                )}, but ${getNickname(Player)} was wreathed in spectral foxfire`
+            );
+
+            if (
+                modStorage.chaosAura?.retribution && (
+                    !targetStorage?.chaosAura?.enabled ||
+                    !targetStorage?.chaosAura?.triggers?.itemsChange ||
+                    targetStorage?.chaosAura?.whiteList?.includes(Player.MemberNumber)
+                ) && ServerChatRoomGetAllowItem(Player, target)
+            ) {
+                const items1 = appearance1
+                    .filter(itemsFilter)
+                    .map((item) => JSON.stringify(item));
+                const items2 = appearance2
+                    .filter(itemsFilter)
+                    .map((item) => JSON.stringify(item));
+                let retributionItems = [];
+                items2.forEach((item) => {
+                    if (!items1.includes(item)) retributionItems.push(JSON.parse(item));
+                });
+                retributionItems = retributionItems.filter(
+                    (item) => item.Group !== "ItemHandheld"
+                );
+
+                if (retributionItems.length > 0) {
+                    messagesManager.sendAction(
+                        `Retribution: Used restraints are returned to ${getNickname(target)}`
+                    );
+                    ServerSend("ChatRoomCharacterUpdate", {
+                        ID: target.AccountName.replace("Online-", ""),
+                        ActivePose: target.ActivePose,
+                        Appearance: ServerAppearanceBundle(target.Appearance).concat(
+                            retributionItems
+                        )
+                    });
+                }
+            }
+            // return;
+        }
+    }
+
+    chaosAuraLastData.appearance = newAppearance;
+    chaosAuraLastData.pose = newActivePose;
+    await waitFor(() => {
+        return (
+            JSON.stringify(
+                ServerAppearanceBundle(
+                    Player.Appearance
+                )
+            ) === JSON.stringify(
+                newAppearance
+            )
+        );
+    });
+    return true;
+}
+
+function onPlayerAppearanceChange(target: Character) {
+    if (!isChaosAuraActive()) return;
+    if (target.IsPlayer()) updateChaosAuraLastData();
+    else skyShieldAction(target);
+}
+
+
+export function loadChaosAura(): void {
+    if (isChaosAuraActive()) updateChaosAuraLastData();
+
+    hookFunction("ChatRoomCharacterItemUpdate", HookPriority.OBSERVE, (args, next) => {
+        next(args);
+        const [target] = args as [Character];
+        if (target.IsPlayer()) onPlayerAppearanceChange(Player);
+    });
+
+    hookFunction("ChatRoomSyncItem", HookPriority.OBSERVE, (args, next) => {
+        next(args);
+        const [data] = args;
+        const item = data?.Item;
+        const target1 = getPlayer(data?.Source);
+        const target2 = getPlayer(item?.Target);
+        if (!target1 || !target2) return;
+        if (target2.IsPlayer()) onPlayerAppearanceChange(target1);
+    });
+
+    hookFunction("ChatRoomSyncSingle", HookPriority.OBSERVE, (args, next) => {
+        next(args);
+        const [data] = args;
+        const target1 = getPlayer(data?.SourceMemberNumber);
+        const target2 = getPlayer(data?.Character?.MemberNumber);
+        if (!target1 || !target2) return;
+        if (target2.IsPlayer()) onPlayerAppearanceChange(target1);
+    });
+
+    // We can't use ChatRoomRegisterMessageHandler here, because we need to proccess LSCG command before LSCG does it
+    hookFunction("ChatRoomMessage", HookPriority.OVERRIDE_BEHAVIOR, (args, next) => {
+        const data = args[0];
+        if (
+            !isChaosAuraActive() ||
+            !isChaosAuraTriggerActive("magicCast") ||
+            typeof data.Sender !== "number" ||
+            data.Sender === Player.MemberNumber ||
+            modStorage.chaosAura?.whiteList?.includes(data.Sender) ||
+            !findModByName("LSCG")
+        ) return next(args);
+        if (data.Content !== "LSCGMsg") return next(args);
+        const sender = getPlayer(data.Sender);
+        //@ts-expect-error
+        const lscgMessage = data.Dictionary?.[0]?.message;
+        const commandName = lscgMessage?.command?.name;
+        const commandArgs = lscgMessage?.command?.args;
+        const spell = commandArgs?.find((arg) => arg?.name === "spell")?.value;
+        if (commandName !== "spell" || spell === undefined || isLSCGSpellBeneficial(spell)) return next(args);
+        modStorage.chaosAura.triggersCount ??= 0;
+        modStorage.chaosAura.triggersCount++;
+        syncStorage();
+        const expression = `${getRandomNumber(1, 15)}${getRandomNumber(1, 2) === 1 ? '+' : '-'}${getRandomNumber(1, 5)}`;
+        messagesManager.sendAction(`${CharacterNickname(Player)} [∞] successfully saves against ${CharacterNickname(sender)}'s [${expression}] ${spell.Name}.`);
+        if (shouldSpellBounceBack(spell, sender, Player)) {
+            messagesManager.sendAction(`"${spell.Name}" spell bounces off of ${CharacterNickname(Player)} and hits ${CharacterNickname(sender)}.`);
+            ServerSend("ChatRoomChat", {
+                Type: "Hidden",
+                Content: "LSCGMsg",
+                Dictionary: [
+                    {
+                        message: {
+                            IsLSCG: true,
+                            type: "command",
+                            reply: false,
+                            target: data.Sender,
+                            version: getLoadedMods().find((mod) => mod.name === "LSCG").version,
+                            command: {
+                                name: "spell",
+                                args: [
+                                    { name: "spell", value: spell }
+                                ]
+                            }
+                        }
+                    }
+                ]
+            });
+        }
+    });
+}
