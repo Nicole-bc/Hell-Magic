@@ -12,21 +12,9 @@ const chaosAuraLastData = {
 
 type ChaosAuraTrigger = keyof NonNullable<NonNullable<ModStorage["chaosAura"]>["triggers"]>;
 
-// Runtime-only suppression: a successful "shatter" from another player drops the
-// aura for a short window. An unbreakable aura ignores this entirely (immune).
-let auraSuppressedUntil = 0;
-export function suppressChaosAura(ms: number): void {
-    if (modStorage.chaosAura?.unbreakable) return; // indestructible: cannot be shattered
-    auraSuppressedUntil = Math.max(auraSuppressedUntil, Date.now() + ms);
-}
-
 // The aura counts as active if it is enabled OR marked unbreakable.
-// Because this never reads `enabled` alone, an unbreakable aura stays up even if
-// something tries to flip `enabled` to false (a "shatter" attempt cannot stick).
 export function isChaosAuraActive(): boolean {
-    if (modStorage.chaosAura?.unbreakable) return true;      // immune to shatter
-    if (Date.now() < auraSuppressedUntil) return false;       // currently shattered
-    return !!modStorage.chaosAura?.enabled;
+    return !!(modStorage.chaosAura?.enabled || modStorage.chaosAura?.unbreakable);
 }
 
 // An unbreakable aura forces every trigger on regardless of the individual toggles.

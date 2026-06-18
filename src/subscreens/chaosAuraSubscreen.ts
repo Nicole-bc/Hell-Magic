@@ -107,7 +107,7 @@ export class ChaosAuraSubscreen extends BaseSubscreen {
         y += 110;
 
         this.createText({
-            text: "Aura breaker:",
+            text: "Anti retribution:",
             x: 120,
             y
         });
@@ -121,18 +121,6 @@ export class ChaosAuraSubscreen extends BaseSubscreen {
             onChange: () => {
                 modStorage.chaosAura ??= {};
                 modStorage.chaosAura.ignoreEnemyAura = !modStorage.chaosAura.ignoreEnemyAura;
-            }
-        });
-        y += 90;
-
-        this.createCheckbox({
-            text: "Shatter enemy aura",
-            x: 140,
-            y,
-            isChecked: modStorage.chaosAura?.shatterEnemyAura,
-            onChange: () => {
-                modStorage.chaosAura ??= {};
-                modStorage.chaosAura.shatterEnemyAura = !modStorage.chaosAura.shatterEnemyAura;
             }
         });
         y += 90;

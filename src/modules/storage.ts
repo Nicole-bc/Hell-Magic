@@ -46,9 +46,8 @@ export interface ModStorage {
         }
         triggersCount?: number
         ignoreItemsChangeIfNotRestraint?: boolean
-        // Aura-breaker (attacker-side) toggles:
-        ignoreEnemyAura?: boolean   // shrug off a shielded target's retaliation against you
-        shatterEnemyAura?: boolean  // best-effort break of a target's (non-unbreakable) aura
+        // Standalone anti-retribution shield (works even when the aura is disabled).
+        ignoreEnemyAura?: boolean
     }
     cheats?: {
         permanentSkillsBoost?: boolean

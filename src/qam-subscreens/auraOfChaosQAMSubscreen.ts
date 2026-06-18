@@ -33,12 +33,6 @@ export class AuraOfChaosQAMSubscreen extends BaseQAMSubscreen {
             syncStorage();
         });
 
-        const shatterEnemyCheckbox = this.buildCheckbox("Shatter enemy aura", modStorage.chaosAura?.shatterEnemyAura, (isChecked) => {
-            modStorage.chaosAura ??= {};
-            modStorage.chaosAura.shatterEnemyAura = isChecked;
-            syncStorage();
-        });
-
         const triggersText = this.buildText("Triggers:");
 
         const clothesTriggerCheckbox = this.buildCheckbox("Clothes Change", modStorage.chaosAura?.triggers?.clothesChange, (isChecked) => {
@@ -69,6 +63,6 @@ export class AuraOfChaosQAMSubscreen extends BaseQAMSubscreen {
             syncStorage();
         });
 
-        container.append(stateCheckbox, unbreakableCheckbox, retributionCheckbox, ignoreEnemyCheckbox, shatterEnemyCheckbox, triggersText, clothesTriggerCheckbox, itemsTriggerCheckbox, poseTriggerCheckbox, magicTriggerCheckbox);
+        container.append(stateCheckbox, unbreakableCheckbox, retributionCheckbox, ignoreEnemyCheckbox, triggersText, clothesTriggerCheckbox, itemsTriggerCheckbox, poseTriggerCheckbox, magicTriggerCheckbox);
     }
 }
