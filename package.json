@@ -4,7 +4,7 @@
   "description": "Cheat addon with quality of life features, own activities and magical mechanics",
   "main": "index.js",
   "scripts": {
-    "dev": "esbuild src/index.ts --bundle --sourcemap --watch --outfile=bundle.js --loader:.ts=ts --loader:.css=text --loader:.png=dataurl --loader:.svg=dataurl",
+    "dev": "esbuild src/index.ts --bundle --sourcemap --watch --outfile=dist/bundle.js --loader:.ts=ts --loader:.css=text --loader:.png=dataurl --loader:.svg=dataurl",
     "build": "node ./build.mjs",
     "lint": "pnpm exec biome lint",
     "lint:fix": "pnpm exec biome lint --write"

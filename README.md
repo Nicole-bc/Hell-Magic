@@ -42,11 +42,15 @@ Both load `bundle.js` from this repo's GitHub Pages site
 (`https://nicole-bc.github.io/Hell-Magic/bundle.js`).
 
 ## Hosting your build
+This repo deploys automatically. On every push to `main`, the GitHub
+Actions workflow (`.github/workflows/deploy.yml`) runs `pnpm build` and
+publishes the `dist` folder to the `gh-pages` branch.
 
-1. `pnpm install` then `pnpm build` — writes `bundle.js` to the repo root.
-2. Commit `bundle.js`.
-3. Repo **Settings → Pages → Deploy from branch → `main` / root**.
-4. Install via Tampermonkey using `bcc.user.js`, or use `bcc.bookmark.js`.
+One-time setup: repo **Settings → Pages → Source → Deploy from a branch →
+`gh-pages` / root**. After that just push source changes; do **not** commit
+`bundle.js` yourself (`dist` is git-ignored and built by CI).
+The userscript loads `https://nicole-bc.github.io/Hell-Magic/bundle.js`,
+which Pages serves from the deployed `gh-pages` branch.
 
 ## Tampermonkey script
 

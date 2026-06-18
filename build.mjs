@@ -4,7 +4,7 @@ build({
     entryPoints: ["./src/index.ts"],
     bundle: true,
     sourcemap: true,
-    outfile: "./bundle.js",
+    outfile: "./dist/bundle.js",
     loader: {
         ".ts": "ts",
         ".css": "text",
