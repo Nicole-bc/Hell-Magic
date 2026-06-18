@@ -29632,12 +29632,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
         if (!Player.CanInteract()) {
           return re.error({ message: "You can't interact", duration: 3e3 });
         }
-        if (!isMagicItem(InventoryGet(Player, "ItemHandheld"))) {
-          return re.error({
-            message: "You should hold magic item in your hand to cast spells",
-            duration: 5e3
-          });
-        }
         const allow = allowSpellCast(Player, target, spell);
         if (allow.result === false) {
           return re.error({

@@ -1,5 +1,5 @@
 import { CastSpellMessageDto } from "@/dto/castSpellMessageDto";
-import { getSpellIcon, addDefaultParametersIfNeeds, getSpellEffect, isMagicItem, allowSpellCast, castSpell } from "@/modules/darkMagic";
+import { getSpellIcon, addDefaultParametersIfNeeds, getSpellEffect, allowSpellCast, castSpell } from "@/modules/darkMagic";
 import { modStorage, ModStorage } from "@/modules/storage";
 import { toastsManager } from "zois-core/popups";
 import { validateData } from "zois-core/validation";
