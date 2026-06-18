@@ -30061,14 +30061,9 @@ One of mods you are using is using an old version of SDK. It will work for now b
         modStorage.chaosAura.retribution = isChecked;
         syncStorage();
       });
-      const ignoreEnemyCheckbox = this.buildCheckbox("Ignore enemy aura", modStorage.chaosAura?.ignoreEnemyAura, (isChecked) => {
+      const ignoreEnemyCheckbox = this.buildCheckbox("anti retribution", modStorage.chaosAura?.ignoreEnemyAura, (isChecked) => {
         modStorage.chaosAura ??= {};
         modStorage.chaosAura.ignoreEnemyAura = isChecked;
-        syncStorage();
-      });
-      const shatterEnemyCheckbox = this.buildCheckbox("Shatter enemy aura", modStorage.chaosAura?.shatterEnemyAura, (isChecked) => {
-        modStorage.chaosAura ??= {};
-        modStorage.chaosAura.shatterEnemyAura = isChecked;
         syncStorage();
       });
       const triggersText = this.buildText("Triggers:");
