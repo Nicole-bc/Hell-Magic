@@ -29628,12 +29628,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
         if (!Player.CanInteract()) {
           return re.error({ message: "You can't interact", duration: 3e3 });
         }
-        if (!isMagicItem(InventoryGet(Player, "ItemHandheld"))) {
-          return re.error({
-            message: "You should hold magic item in your hand to cast spells",
-            duration: 5e3
-          });
-        }
         const allow = allowSpellCast(Player, target, spell);
         if (allow.result === false) {
           return re.error({
@@ -30626,6 +30620,10 @@ One of mods you are using is using an old version of SDK. It will work for now b
     chaosAuraLastData.pose = [...Player.ActivePose];
   }
   async function skyShieldAction(target) {
+    if (chaosAuraLastData.appearance === null || chaosAuraLastData.pose === null) {
+      updateChaosAuraLastData();
+      return true;
+    }
     const appearance1 = chaosAuraLastData.appearance;
     const activePose1 = chaosAuraLastData.pose;
     const appearance2 = ServerAppearanceBundle(Player.Appearance);
@@ -30838,7 +30836,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
         isChecked: modStorage.chaosAura?.unbreakable,
         x: 120,
         y: y6,
-        text: "Unbreakable (always on, all triggers, can't be shattered)",
+        text: "Unbreakable (always on, all triggers)",
         onChange: () => {
           if (!modStorage.chaosAura) modStorage.chaosAura = {};
           modStorage.chaosAura.unbreakable = !modStorage.chaosAura.unbreakable;
@@ -30896,7 +30894,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
       });
       y6 += 110;
       this.createText({
-        text: "Anti retribution:",
+        text: "Anti-retribution:",
         x: 120,
         y: y6
       });
