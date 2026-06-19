@@ -30091,7 +30091,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
         modStorage.chaosAura.triggers.magicCast = isChecked;
         syncStorage();
       });
-      container.append(stateCheckbox, unbreakableCheckbox, retributionCheckbox, ignoreEnemyCheckbox, shatterEnemyCheckbox, triggersText, clothesTriggerCheckbox, itemsTriggerCheckbox, poseTriggerCheckbox, magicTriggerCheckbox);
+      container.append(stateCheckbox, unbreakableCheckbox, retributionCheckbox, ignoreEnemyCheckbox, triggersText, clothesTriggerCheckbox, itemsTriggerCheckbox, poseTriggerCheckbox, magicTriggerCheckbox);
     }
   };
 
@@ -30914,17 +30914,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
         onChange: () => {
           modStorage.chaosAura ??= {};
           modStorage.chaosAura.ignoreEnemyAura = !modStorage.chaosAura.ignoreEnemyAura;
-        }
-      });
-      y6 += 90;
-      this.createCheckbox({
-        text: "Shatter enemy aura",
-        x: 140,
-        y: y6,
-        isChecked: modStorage.chaosAura?.shatterEnemyAura,
-        onChange: () => {
-          modStorage.chaosAura ??= {};
-          modStorage.chaosAura.shatterEnemyAura = !modStorage.chaosAura.shatterEnemyAura;
         }
       });
       y6 += 90;
