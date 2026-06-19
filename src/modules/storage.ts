@@ -34,7 +34,7 @@ export interface ModStorage {
     chaosAura?: {
         enabled?: boolean
         // When true, the aura behaves like `enabled` with every trigger forced on,
-        // and cannot be switched off by any external/"shatter" interaction.
+        // and cannot be switched off externally.
         unbreakable?: boolean
         retribution?: boolean
         whiteList?: number[]
@@ -46,7 +46,9 @@ export interface ModStorage {
         }
         triggersCount?: number
         ignoreItemsChangeIfNotRestraint?: boolean
-        // Standalone anti-retribution shield (works even when the aura is disabled).
+        // Standalone anti-retribution shield. Works even when the aura is disabled:
+        // when you act on someone whose aura is up, retaliation aimed back at you is
+        // undone for a few seconds.
         ignoreEnemyAura?: boolean
     }
     cheats?: {

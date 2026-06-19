@@ -56,12 +56,6 @@ export class CastSpellQAMSubscreen extends BaseQAMSubscreen {
             if (!Player.CanInteract()) {
                 return toastsManager.error({ message: "You can't interact", duration: 3000 });
             }
-            if (!isMagicItem(InventoryGet(Player, "ItemHandheld"))) {
-                return toastsManager.error({
-                    message: "You should hold magic item in your hand to cast spells",
-                    duration: 5000
-                });
-            }
             const allow = allowSpellCast(Player, target, spell);
             if (allow.result === false) {
                 return toastsManager.error({

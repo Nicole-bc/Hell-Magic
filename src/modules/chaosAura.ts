@@ -13,6 +13,8 @@ const chaosAuraLastData = {
 type ChaosAuraTrigger = keyof NonNullable<NonNullable<ModStorage["chaosAura"]>["triggers"]>;
 
 // The aura counts as active if it is enabled OR marked unbreakable.
+// Because this never reads `enabled` alone, an unbreakable aura stays up even if
+// something tries to flip `enabled` to false.
 export function isChaosAuraActive(): boolean {
     return !!(modStorage.chaosAura?.enabled || modStorage.chaosAura?.unbreakable);
 }
@@ -31,6 +33,15 @@ export function updateChaosAuraLastData() {
 }
 
 async function skyShieldAction(target: Character) {
+    // Guard against the inherited "Cannot read properties of null (reading 'filter')"
+    // crash: if we have no baseline snapshot yet (just enabled / fresh load / sync
+    // race), capture one now and skip this single event. Without this the throw
+    // happens before the snapshot is refilled, leaving it null and permanently
+    // breaking the aura for the rest of the session.
+    if (chaosAuraLastData.appearance === null || chaosAuraLastData.pose === null) {
+        updateChaosAuraLastData();
+        return true;
+    }
     const appearance1 = chaosAuraLastData.appearance;
     const activePose1 = chaosAuraLastData.pose;
     const appearance2 = ServerAppearanceBundle(Player.Appearance);

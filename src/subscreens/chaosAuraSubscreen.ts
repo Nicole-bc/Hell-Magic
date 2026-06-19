@@ -42,7 +42,7 @@ export class ChaosAuraSubscreen extends BaseSubscreen {
             isChecked: modStorage.chaosAura?.unbreakable,
             x: 120,
             y,
-            text: "Unbreakable (always on, all triggers, can't be shattered)",
+            text: "Unbreakable (always on, all triggers)",
             onChange: () => {
                 if (!modStorage.chaosAura) modStorage.chaosAura = {};
                 modStorage.chaosAura.unbreakable = !modStorage.chaosAura.unbreakable;
@@ -107,7 +107,7 @@ export class ChaosAuraSubscreen extends BaseSubscreen {
         y += 110;
 
         this.createText({
-            text: "Anti retribution:",
+            text: "Anti-retribution:",
             x: 120,
             y
         });
