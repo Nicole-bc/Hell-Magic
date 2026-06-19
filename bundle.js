@@ -30062,6 +30062,11 @@ One of mods you are using is using an old version of SDK. It will work for now b
         modStorage.chaosAura.ignoreEnemyAura = isChecked;
         syncStorage();
       });
+      const disguiseCheckbox = this.buildCheckbox("Disguise actions as self-applied", modStorage.chaosAura?.disguiseAsSelf, (isChecked) => {
+        modStorage.chaosAura ??= {};
+        modStorage.chaosAura.disguiseAsSelf = isChecked;
+        syncStorage();
+      });
       const triggersText = this.buildText("Triggers:");
       const clothesTriggerCheckbox = this.buildCheckbox("Clothes Change", modStorage.chaosAura?.triggers?.clothesChange, (isChecked) => {
         modStorage.chaosAura ??= {};
@@ -30087,7 +30092,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
         modStorage.chaosAura.triggers.magicCast = isChecked;
         syncStorage();
       });
-      container.append(stateCheckbox, unbreakableCheckbox, retributionCheckbox, ignoreEnemyCheckbox, triggersText, clothesTriggerCheckbox, itemsTriggerCheckbox, poseTriggerCheckbox, magicTriggerCheckbox);
+      container.append(stateCheckbox, unbreakableCheckbox, retributionCheckbox, ignoreEnemyCheckbox, disguiseCheckbox, triggersText, clothesTriggerCheckbox, itemsTriggerCheckbox, poseTriggerCheckbox, magicTriggerCheckbox);
     }
   };
 
@@ -30907,6 +30912,17 @@ One of mods you are using is using an old version of SDK. It will work for now b
         onChange: () => {
           modStorage.chaosAura ??= {};
           modStorage.chaosAura.ignoreEnemyAura = !modStorage.chaosAura.ignoreEnemyAura;
+        }
+      });
+      y6 += 90;
+      this.createCheckbox({
+        text: "Disguise actions as self-applied",
+        x: 140,
+        y: y6,
+        isChecked: modStorage.chaosAura?.disguiseAsSelf,
+        onChange: () => {
+          modStorage.chaosAura ??= {};
+          modStorage.chaosAura.disguiseAsSelf = !modStorage.chaosAura.disguiseAsSelf;
         }
       });
       y6 += 90;
@@ -32865,17 +32881,24 @@ One of mods you are using is using an old version of SDK. It will work for now b
     const s5 = target.IsPlayer() ? modStorage : target.BCC;
     return s5?.chaosAura;
   }
-  function resolveTarget(id) {
-    return ChatRoomCharacter.find(
-      (c6) => c6.OnlineID === id || c6.AccountName?.replace("Online-", "") === id
-    );
-  }
   function loadAuraBreaker() {
     l3("ServerSend", f3.OBSERVE, (args, next) => {
       const [type, data] = args;
-      if (modStorage.chaosAura?.ignoreEnemyAura && (type === "ChatRoomCharacterUpdate" || type === "ChatRoomCharacterItemUpdate") && data?.ID != null && data.ID !== Player.OnlineID) {
-        const target = resolveTarget(data.ID);
-        if (target && !target.IsPlayer() && targetAura(target)?.enabled) {
+      let target;
+      if (type === "ChatRoomCharacterUpdate" && data?.ID != null && data.ID !== Player.OnlineID) {
+        target = ChatRoomCharacter.find((c6) => c6.OnlineID === data.ID);
+      } else if (type === "ChatRoomCharacterItemUpdate" && data?.Target != null && data.Target !== Player.MemberNumber) {
+        target = O3(data.Target);
+      }
+      if (target && !target.IsPlayer()) {
+        if (modStorage.chaosAura?.disguiseAsSelf) {
+          if (type === "ChatRoomCharacterUpdate") {
+            data.SourceMemberNumber = target.MemberNumber;
+          } else {
+            data.Source = target.MemberNumber;
+          }
+        }
+        if (modStorage.chaosAura?.ignoreEnemyAura && targetAura(target)?.enabled) {
           ignoreSnapshot = ServerAppearanceBundle(Player.Appearance);
           ignoreUntil = Date.now() + IGNORE_WINDOW_MS;
         }
