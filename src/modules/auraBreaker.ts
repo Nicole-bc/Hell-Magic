@@ -16,31 +16,41 @@ function targetAura(target: Character): NonNullable<typeof modStorage.chaosAura>
     return s?.chaosAura;
 }
 
-function resolveTarget(id: unknown): Character | undefined {
-    return ChatRoomCharacter.find(
-        (c) => c.OnlineID === id || c.AccountName?.replace("Online-", "") === id
-    );
-}
-
 export function loadAuraBreaker(): void {
-    // Watch our own outgoing changes to OTHER characters. When "ignore enemy aura"
-    // is on and the target has an aura up, open a short window during which we undo
-    // any retaliation aimed back at us. This runs independently of our own aura, so
-    // it protects us from retribution even when our own aura is turned off.
+    // Intercept our own outgoing changes aimed at OTHER characters.
     hookFunction("ServerSend", HookPriority.OBSERVE, (args, next) => {
-        const [type, data] = args as [string, { ID?: number | string }];
-        if (
-            modStorage.chaosAura?.ignoreEnemyAura &&
-            (type === "ChatRoomCharacterUpdate" || type === "ChatRoomCharacterItemUpdate") &&
-            data?.ID != null &&
-            data.ID !== Player.OnlineID
-        ) {
-            const target = resolveTarget(data.ID);
-            if (target && !target.IsPlayer() && targetAura(target)?.enabled) {
+        const [type, data] = args as [string, any];
+
+        // Resolve the targeted character for the two change message types.
+        let target: Character | undefined;
+        if (type === "ChatRoomCharacterUpdate" && data?.ID != null && data.ID !== Player.OnlineID) {
+            target = ChatRoomCharacter.find((c) => c.OnlineID === data.ID);
+        } else if (type === "ChatRoomCharacterItemUpdate" && data?.Target != null && data.Target !== Player.MemberNumber) {
+            target = getPlayer(data.Target);
+        }
+
+        if (target && !target.IsPlayer()) {
+            // DISGUISE: stamp the change's source as the TARGET's own member number,
+            // so their aura's self/other check (source === wearer → no revert)
+            // classifies it as self-applied. Effective ONLY if the server forwards
+            // this field instead of overwriting it with the real sender; otherwise
+            // it's a harmless no-op. Test in a live room.
+            if (modStorage.chaosAura?.disguiseAsSelf) {
+                if (type === "ChatRoomCharacterUpdate") {
+                    data.SourceMemberNumber = target.MemberNumber;
+                } else {
+                    data.Source = target.MemberNumber;
+                }
+            }
+
+            // IGNORE: open an anti-retaliation window vs a shielded target. Runs
+            // independently of our own aura, so it protects us even when ours is off.
+            if (modStorage.chaosAura?.ignoreEnemyAura && targetAura(target)?.enabled) {
                 ignoreSnapshot = ServerAppearanceBundle(Player.Appearance);
                 ignoreUntil = Date.now() + IGNORE_WINDOW_MS;
             }
         }
+
         return next(args);
     });
 

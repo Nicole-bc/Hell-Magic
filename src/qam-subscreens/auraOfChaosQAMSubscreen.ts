@@ -33,6 +33,12 @@ export class AuraOfChaosQAMSubscreen extends BaseQAMSubscreen {
             syncStorage();
         });
 
+        const disguiseCheckbox = this.buildCheckbox("Disguise actions as self-applied", modStorage.chaosAura?.disguiseAsSelf, (isChecked) => {
+            modStorage.chaosAura ??= {};
+            modStorage.chaosAura.disguiseAsSelf = isChecked;
+            syncStorage();
+        });
+
         const triggersText = this.buildText("Triggers:");
 
         const clothesTriggerCheckbox = this.buildCheckbox("Clothes Change", modStorage.chaosAura?.triggers?.clothesChange, (isChecked) => {
@@ -63,6 +69,6 @@ export class AuraOfChaosQAMSubscreen extends BaseQAMSubscreen {
             syncStorage();
         });
 
-        container.append(stateCheckbox, unbreakableCheckbox, retributionCheckbox, ignoreEnemyCheckbox, triggersText, clothesTriggerCheckbox, itemsTriggerCheckbox, poseTriggerCheckbox, magicTriggerCheckbox);
+        container.append(stateCheckbox, unbreakableCheckbox, retributionCheckbox, ignoreEnemyCheckbox, disguiseCheckbox, triggersText, clothesTriggerCheckbox, itemsTriggerCheckbox, poseTriggerCheckbox, magicTriggerCheckbox);
     }
 }

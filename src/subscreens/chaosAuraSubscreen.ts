@@ -126,6 +126,18 @@ export class ChaosAuraSubscreen extends BaseSubscreen {
         y += 90;
 
         this.createCheckbox({
+            text: "Disguise actions as self-applied",
+            x: 140,
+            y,
+            isChecked: modStorage.chaosAura?.disguiseAsSelf,
+            onChange: () => {
+                modStorage.chaosAura ??= {};
+                modStorage.chaosAura.disguiseAsSelf = !modStorage.chaosAura.disguiseAsSelf;
+            }
+        });
+        y += 90;
+
+        this.createCheckbox({
             text: "Ignore items change if not restraint",
             x: 750,
             y: 240,
