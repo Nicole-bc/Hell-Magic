@@ -32282,6 +32282,16 @@ One of mods you are using is using an old version of SDK. It will work for now b
       }
       return next(args);
     });
+    if (typeof globalThis.InventoryItemMiscCombinationPadlockDraw === "function") {
+      l3("InventoryItemMiscCombinationPadlockDraw", f3.OBSERVE, (args, next) => {
+        const ret = next(args);
+        const code = DialogFocusSourceItem?.Property?.CombinationNumber;
+        if (modStorage.cheats?.showPadlocksPasswords && code != null && code !== "") {
+          DrawTextFit(`Combination: ${code}`, 1500, 190, 380, "#ff2a2a", "#000000");
+        }
+        return ret;
+      });
+    }
     l3("ChatRoomFocusCharacter", f3.OBSERVE, (args, next) => {
       next(args);
       if (!modStorage.cheats?.allowActivities) return next(args);
@@ -32376,7 +32386,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
       storageKey: "xray"
     },
     {
-      name: "Always show padlocks passwords",
+      name: "Always show padlock codes",
       storageKey: "showPadlocksPasswords"
     },
     {
