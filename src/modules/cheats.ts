@@ -132,6 +132,20 @@ export function loadCheats(): void {
         return next(args);
     });
 
+    // Combination locks aren't covered above: their unlock screen is a canvas
+    // tumbler, not an input field, so we draw the code onto the screen instead.
+    // Works for locks on yourself and on others (the value is in the synced item).
+    if (typeof (globalThis as any).InventoryItemMiscCombinationPadlockDraw === "function") {
+        hookFunction("InventoryItemMiscCombinationPadlockDraw", HookPriority.OBSERVE, (args, next) => {
+            const ret = next(args);
+            const code = DialogFocusSourceItem?.Property?.CombinationNumber;
+            if (modStorage.cheats?.showPadlocksPasswords && code != null && code !== "") {
+                DrawTextFit(`Combination: ${code}`, 1500, 190, 380, "#ff2a2a", "#000000");
+            }
+            return ret;
+        });
+    }
+
     hookFunction("ChatRoomFocusCharacter", HookPriority.OBSERVE, (args, next) => {
         next(args);
         if (!modStorage.cheats?.allowActivities) return next(args);

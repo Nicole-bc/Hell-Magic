@@ -35,7 +35,7 @@ const booleanCheats: {
             storageKey: "xray"
         },
         {
-            name: "Always show padlocks passwords",
+            name: "Always show padlock codes",
             storageKey: "showPadlocksPasswords"
         },
         {
