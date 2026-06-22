@@ -8,6 +8,9 @@ const LOCK_PROPERTY_KEYS = [
     "MemberNumberListKeys", "Hidden"
 ];
 
+// The lock we captured off a locked item the moment it was opened for swapping.
+let pending: { member: number; group: string; lock: Record<string, any>; until: number } | null = null;
+
 function captureLock(item: Item | null | undefined): Record<string, any> | null {
     if (!item?.Property?.LockedBy) return null;
     const snap: Record<string, any> = {};
@@ -18,11 +21,21 @@ function captureLock(item: Item | null | undefined): Record<string, any> | null 
     return snap;
 }
 
+// Re-apply the captured lock to whatever item now sits in that group.
+function relock(C: Character, p: { member: number; group: string; lock: Record<string, any> }): void {
+    if (!C || C.MemberNumber !== p.member) return;
+    const item = InventoryGet(C, p.group);
+    if (!item || item.Property?.LockedBy) return; // group empty, or already locked
+    InventoryLock(C, item, p.lock.LockedBy as string, p.lock.LockMemberNumber ?? null, false);
+    item.Property = { ...(item.Property ?? {}), ...p.lock };
+    CharacterRefresh(C, true, false);
+    ChatRoomCharacterUpdate(C);
+}
+
 export function loadLockKeeper(): void {
-    // 1) Let the focused locked item be opened for swapping. Normally BC routes a
-    //    locked item straight to its unlock screen; reporting "no Lock effect" for
-    //    just that one focused item makes the change menu appear instead. Scoped to
-    //    the focused item only, so every other lock behaves normally.
+    // 1) Open a locked item for swapping (BC otherwise jumps straight to its unlock
+    //    screen) AND capture its lock here, while the item is still intact. Scoped to
+    //    the one focused item, so every other lock behaves normally.
     hookFunction("InventoryItemHasEffect", HookPriority.OVERRIDE_BEHAVIOR, (args, next) => {
         const [item, effect] = args as [Item, (string | undefined)?];
         if (
@@ -31,35 +44,36 @@ export function loadLockKeeper(): void {
             item != null &&
             item === DialogFocusItem
         ) {
+            const C = CharacterGetCurrent();
+            const group = item.Asset?.Group?.Name;
+            const lock = captureLock(item);
+            if (C && group && lock) {
+                pending = { member: C.MemberNumber, group, lock, until: Date.now() + 30000 };
+            }
             return false;
         }
         return next(args);
     });
 
-    // 2) When an item replaces a locked one in the same group, carry the lock over.
-    hookFunction("InventoryWear", HookPriority.OBSERVE, (args, next) => {
-        if (!modStorage.cheats?.keepLockOnSwap) return next(args);
-
-        const C = args[0] as Character;
-        const groupName = args[2] as string;
-        if (!C || !groupName) return next(args);
-
-        // Snapshot the lock on the item currently in that group (before it's replaced).
-        const prevLock = captureLock(InventoryGet(C, groupName));
-
+    // 2) Once a new item lands in that group, re-apply the captured lock. Hooked at the
+    //    lowest common point (CharacterAppearanceSetItem) plus InventoryWear, with a
+    //    deferred re-assert to survive the dialog's own follow-up sync.
+    const restore: Parameters<typeof hookFunction>[2] = (args, next) => {
         const ret = next(args);
-
-        if (prevLock?.LockedBy) {
-            const newItem = InventoryGet(C, groupName);
-            if (newItem && !InventoryGetLock(newItem)) {
-                // Re-establish the lock proper, then overlay the captured secret/state.
-                InventoryLock(C, newItem, prevLock.LockedBy as string, prevLock.LockMemberNumber ?? null, false);
-                newItem.Property = { ...(newItem.Property ?? {}), ...prevLock };
-                CharacterRefresh(C, true, false);
-                ChatRoomCharacterUpdate(C);
+        if (modStorage.cheats?.keepLockOnSwap && pending && Date.now() <= pending.until) {
+            const C = args[0] as Character;
+            if (C?.MemberNumber === pending.member) {
+                const p = pending;
+                pending = null;
+                relock(C, p);
+                setTimeout(() => relock(C, p), 150);
             }
         }
-
         return ret;
-    });
+    };
+
+    if (typeof (globalThis as any).CharacterAppearanceSetItem === "function") {
+        hookFunction("CharacterAppearanceSetItem", HookPriority.OBSERVE, restore);
+    }
+    hookFunction("InventoryWear", HookPriority.OBSERVE, restore);
 }
