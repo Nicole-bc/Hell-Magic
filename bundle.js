@@ -24823,6 +24823,14 @@ One of mods you are using is using an old version of SDK. It will work for now b
     ["path", { d: "M12 10v4" }]
   ];
 
+  // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/repeat.js
+  var Repeat = [
+    ["path", { d: "m17 2 4 4-4 4" }],
+    ["path", { d: "M3 11v-1a4 4 0 0 1 4-4h14" }],
+    ["path", { d: "m7 22-4-4 4-4" }],
+    ["path", { d: "M21 13v1a4 4 0 0 1-4 4H3" }]
+  ];
+
   // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/send-to-back.js
   var SendToBack = [
     ["rect", { x: "14", y: "14", width: "8", height: "8", rx: "2" }],
@@ -27672,6 +27680,22 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
   };
 
+  // src/qam-subscreens/lockKeeperQAMSubscreen.ts
+  var LockKeeperQAMSubscreen = class extends BaseQAMSubscreen {
+    name = "Lock Keeper";
+    description = "Keep a lock when switching the restraint under it";
+    load(container) {
+      super.load(container);
+      const keepLockCheckbox = this.buildCheckbox("Keep lock when switching restraint", modStorage.cheats?.keepLockOnSwap, (isChecked) => {
+        modStorage.cheats ??= {};
+        modStorage.cheats.keepLockOnSwap = isChecked;
+        syncStorage();
+      });
+      const hint = this.buildText("While on, a locked item can be opened and swapped, and the lock (code, owner and timer) is carried onto whatever you put there.");
+      container.append(keepLockCheckbox, hint);
+    }
+  };
+
   // src/qam-subscreens/exportAppearanceQAMSubscreen.ts
   var ExportAppearanceQAMSubscreen = class extends BaseQAMSubscreen {
     name = "Export Appearance";
@@ -30445,6 +30469,12 @@ One of mods you are using is using an old version of SDK. It will work for now b
       subscreen: new AuraOfChaosQAMSubscreen(),
       icon: Flame,
       isBeta: true
+    },
+    {
+      id: 1015,
+      subscreen: new LockKeeperQAMSubscreen(),
+      icon: Repeat,
+      isBeta: true
     }
   ];
   function createQAMButton() {
@@ -32938,6 +32968,57 @@ One of mods you are using is using an old version of SDK. It will work for now b
     });
   }
 
+  // src/modules/lockKeeper.ts
+  var LOCK_PROPERTY_KEYS = [
+    "LockedBy",
+    "LockMemberNumber",
+    "Password",
+    "CombinationNumber",
+    "LockPickSeed",
+    "RemoveTimer",
+    "MaxTimer",
+    "ShowTimer",
+    "RemoveItem",
+    "MemberNumberListKeys",
+    "Hidden"
+  ];
+  function captureLock(item) {
+    if (!item?.Property?.LockedBy) return null;
+    const snap = {};
+    const prop = item.Property;
+    for (const k6 of LOCK_PROPERTY_KEYS) {
+      if (prop[k6] !== void 0) snap[k6] = JSON.parse(JSON.stringify(prop[k6]));
+    }
+    return snap;
+  }
+  function loadLockKeeper() {
+    l3("InventoryItemHasEffect", f3.OVERRIDE_BEHAVIOR, (args, next) => {
+      const [item, effect] = args;
+      if (modStorage.cheats?.keepLockOnSwap && effect === "Lock" && item != null && item === DialogFocusItem) {
+        return false;
+      }
+      return next(args);
+    });
+    l3("InventoryWear", f3.OBSERVE, (args, next) => {
+      if (!modStorage.cheats?.keepLockOnSwap) return next(args);
+      const C3 = args[0];
+      const groupName = args[2];
+      if (!C3 || !groupName) return next(args);
+      const prevLock = captureLock(InventoryGet(C3, groupName));
+      const ret = next(args);
+      if (prevLock?.LockedBy) {
+        const newItem = InventoryGet(C3, groupName);
+        if (newItem && !InventoryGetLock(newItem)) {
+          InventoryLock(C3, newItem, prevLock.LockedBy, prevLock.LockMemberNumber ?? null, false);
+          newItem.Property = { ...newItem.Property ?? {}, ...prevLock };
+          CharacterRefresh(C3, true, false);
+          ChatRoomCharacterUpdate(C3);
+        }
+      }
+      return ret;
+    });
+  }
+
   // src/modules/overlay.ts
   function loadOverlay() {
     l3(
@@ -34406,6 +34487,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
     loadQuickAccessMenu();
     loadChaosAura();
     loadAuraBreaker();
+    loadLockKeeper();
     loadOverlay();
     loadDarkMagic();
     addActivities();
@@ -34551,6 +34633,7 @@ lucide/dist/esm/icons/panel-left-close.js:
 lucide/dist/esm/icons/panels-top-left.js:
 lucide/dist/esm/icons/pencil.js:
 lucide/dist/esm/icons/person-standing.js:
+lucide/dist/esm/icons/repeat.js:
 lucide/dist/esm/icons/send-to-back.js:
 lucide/dist/esm/icons/settings.js:
 lucide/dist/esm/icons/shield-alert.js:
