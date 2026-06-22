@@ -1,5 +1,5 @@
 import mouthWateringIcon from "@/assets/game-icons/mouthWatering.svg";
-import { ClipboardCopy, ClipboardPaste, CopyPlus, Eye, Flame, GitCompareArrows, HatGlasses, type IconNode, Lock, LogOut, MapPinned, PersonStanding, Shield, ShieldAlert, ShieldMinus, Unlock, Wand } from "lucide";
+import { ClipboardCopy, ClipboardPaste, CopyPlus, Eye, Flame, GitCompareArrows, HatGlasses, type IconNode, Lock, LogOut, MapPinned, PersonStanding, Repeat, Shield, ShieldAlert, ShieldMinus, Unlock, Wand } from "lucide";
 import { getPlayer } from "zois-core";
 import { appearanceComparer, serverAppearanceBundleToAppearance } from "zois-core/wardrobe";
 import { modStorage } from "./storage";
@@ -9,6 +9,7 @@ import { MainQAMSubscreen } from "@/qam-subscreens/mainQAMSubscreen";
 import { ToggleInvisibilityQAMSubscreen } from "@/qam-subscreens/toggleInvisibilityQAMSubscreen";
 import { PosesManagerQAMSubscreen } from "@/qam-subscreens/posesManagerQAMSubscreen";
 import { ImportAppearanceQAMSubscreen } from "@/qam-subscreens/importAppearanceQAMSubscreen";
+import { LockKeeperQAMSubscreen } from "@/qam-subscreens/lockKeeperQAMSubscreen";
 import { ExportAppearanceQAMSubscreen } from "@/qam-subscreens/exportAppearanceQAMSubscreen";
 import { LeaveRoomQAMSubscreen } from "@/qam-subscreens/leaveRoomQAMSubscreen";
 import { TotalReleaseQAMSubscreen } from "@/qam-subscreens/totalReleaseQAMSubscreen";
@@ -406,6 +407,12 @@ export const qamFeatures: QAMFeature[] = [
         id: 1014,
         subscreen: new AuraOfChaosQAMSubscreen(),
         icon: Flame,
+        isBeta: true
+    },
+    {
+        id: 1015,
+        subscreen: new LockKeeperQAMSubscreen(),
+        icon: Repeat,
         isBeta: true
     }
 ];

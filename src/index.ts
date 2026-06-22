@@ -9,6 +9,7 @@ import { loadCheats } from "./modules/cheats";
 import { loadStorage } from "./modules/storage";
 import { loadChaosAura } from "./modules/chaosAura";
 import { loadAuraBreaker } from "./modules/auraBreaker";
+import { loadLockKeeper } from "./modules/lockKeeper";
 import { loadOverlay } from "./modules/overlay";
 import { loadDarkMagic } from "./modules/darkMagic";
 import { loadQuickAccessMenu } from "./modules/quickAccessMenu";
@@ -60,6 +61,7 @@ function start() {
     loadQuickAccessMenu();
     loadChaosAura();
     loadAuraBreaker();
+    loadLockKeeper();
     loadOverlay();
     loadDarkMagic();
     addActivities();

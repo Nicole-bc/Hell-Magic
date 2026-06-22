@@ -64,6 +64,8 @@ export interface ModStorage {
         xray?: boolean
         showPadlocksPasswords?: boolean
         disableArousalOverlay?: boolean
+        // Swap a restraint while carrying its lock (code/owner/timer) onto the new item.
+        keepLockOnSwap?: boolean
     }
     darkMagic?: {
         spells?: {
