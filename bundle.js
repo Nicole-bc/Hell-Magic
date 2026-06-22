@@ -6006,8 +6006,8 @@ One of mods you are using is using an old version of SDK. It will work for now b
             var lane = concurrentQueues[i6];
             concurrentQueues[i6++] = null;
             if (null !== queue && null !== update) {
-              var pending = queue.pending;
-              null === pending ? update.next = update : (update.next = pending.next, pending.next = update);
+              var pending2 = queue.pending;
+              null === pending2 ? update.next = update : (update.next = pending2.next, pending2.next = update);
               queue.pending = update;
             }
             0 !== lane && markUpdateLaneFromFiberToRoot(fiber, update, lane);
@@ -9384,8 +9384,8 @@ One of mods you are using is using an old version of SDK. It will work for now b
         }
         function enqueueRenderPhaseUpdate(queue, update) {
           didScheduleRenderPhaseUpdateDuringThisPass = didScheduleRenderPhaseUpdate = true;
-          var pending = queue.pending;
-          null === pending ? update.next = update : (update.next = pending.next, pending.next = update);
+          var pending2 = queue.pending;
+          null === pending2 ? update.next = update : (update.next = pending2.next, pending2.next = update);
           queue.pending = update;
         }
         function entangleTransitionUpdate(root2, queue, lane) {
@@ -32982,6 +32982,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
     "MemberNumberListKeys",
     "Hidden"
   ];
+  var pending = null;
   function captureLock(item) {
     if (!item?.Property?.LockedBy) return null;
     const snap = {};
@@ -32991,32 +32992,46 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
     return snap;
   }
+  function relock(C3, p5) {
+    if (!C3 || C3.MemberNumber !== p5.member) return;
+    const item = InventoryGet(C3, p5.group);
+    if (!item || item.Property?.LockedBy) return;
+    InventoryLock(C3, item, p5.lock.LockedBy, p5.lock.LockMemberNumber ?? null, false);
+    item.Property = { ...item.Property ?? {}, ...p5.lock };
+    CharacterRefresh(C3, true, false);
+    ChatRoomCharacterUpdate(C3);
+  }
   function loadLockKeeper() {
     l3("InventoryItemHasEffect", f3.OVERRIDE_BEHAVIOR, (args, next) => {
       const [item, effect] = args;
       if (modStorage.cheats?.keepLockOnSwap && effect === "Lock" && item != null && item === DialogFocusItem) {
+        const C3 = CharacterGetCurrent();
+        const group = item.Asset?.Group?.Name;
+        const lock = captureLock(item);
+        if (C3 && group && lock) {
+          pending = { member: C3.MemberNumber, group, lock, until: Date.now() + 3e4 };
+        }
         return false;
       }
       return next(args);
     });
-    l3("InventoryWear", f3.OBSERVE, (args, next) => {
-      if (!modStorage.cheats?.keepLockOnSwap) return next(args);
-      const C3 = args[0];
-      const groupName = args[2];
-      if (!C3 || !groupName) return next(args);
-      const prevLock = captureLock(InventoryGet(C3, groupName));
+    const restore = (args, next) => {
       const ret = next(args);
-      if (prevLock?.LockedBy) {
-        const newItem = InventoryGet(C3, groupName);
-        if (newItem && !InventoryGetLock(newItem)) {
-          InventoryLock(C3, newItem, prevLock.LockedBy, prevLock.LockMemberNumber ?? null, false);
-          newItem.Property = { ...newItem.Property ?? {}, ...prevLock };
-          CharacterRefresh(C3, true, false);
-          ChatRoomCharacterUpdate(C3);
+      if (modStorage.cheats?.keepLockOnSwap && pending && Date.now() <= pending.until) {
+        const C3 = args[0];
+        if (C3?.MemberNumber === pending.member) {
+          const p5 = pending;
+          pending = null;
+          relock(C3, p5);
+          setTimeout(() => relock(C3, p5), 150);
         }
       }
       return ret;
-    });
+    };
+    if (typeof globalThis.CharacterAppearanceSetItem === "function") {
+      l3("CharacterAppearanceSetItem", f3.OBSERVE, restore);
+    }
+    l3("InventoryWear", f3.OBSERVE, restore);
   }
 
   // src/modules/overlay.ts
