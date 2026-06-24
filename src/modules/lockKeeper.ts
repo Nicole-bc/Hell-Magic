@@ -33,27 +33,50 @@ function relock(C: Character, p: { member: number; group: string; lock: Record<s
 }
 
 export function loadLockKeeper(): void {
-    // 1) Open a locked item for swapping (BC otherwise jumps straight to its unlock
-    //    screen) AND capture its lock here, while the item is still intact. Scoped to
-    //    the one focused item, so every other lock behaves normally.
+    // True only for the single item you're currently looking at, while the toggle is on.
+    const isFocused = (item: Item | null | undefined): boolean =>
+        !!modStorage.cheats?.keepLockOnSwap && item != null && item === DialogFocusItem;
+
+    // 1) Open a locked item for swapping. BC decides "this is locked, show the unlock
+    //    screen" via one of several lock checks, so we neutralise all of them for the
+    //    focused item only — and capture the lock here while it's still intact.
+    const captureFromFocus = (item: Item): void => {
+        const C = CharacterGetCurrent();
+        const group = item.Asset?.Group?.Name;
+        const lock = captureLock(item);
+        if (C && group && lock) {
+            pending = { member: C.MemberNumber, group, lock, until: Date.now() + 30000 };
+        }
+    };
+
     hookFunction("InventoryItemHasEffect", HookPriority.OVERRIDE_BEHAVIOR, (args, next) => {
         const [item, effect] = args as [Item, (string | undefined)?];
-        if (
-            modStorage.cheats?.keepLockOnSwap &&
-            effect === "Lock" &&
-            item != null &&
-            item === DialogFocusItem
-        ) {
-            const C = CharacterGetCurrent();
-            const group = item.Asset?.Group?.Name;
-            const lock = captureLock(item);
-            if (C && group && lock) {
-                pending = { member: C.MemberNumber, group, lock, until: Date.now() + 30000 };
-            }
+        if (effect === "Lock" && isFocused(item)) {
+            captureFromFocus(item);
             return false;
         }
         return next(args);
     });
+
+    hookFunction("InventoryGetLock", HookPriority.OVERRIDE_BEHAVIOR, (args, next) => {
+        const [item] = args as [Item];
+        if (isFocused(item)) {
+            captureFromFocus(item);
+            return null;
+        }
+        return next(args);
+    });
+
+    if (typeof (globalThis as any).InventoryItemHasLock === "function") {
+        hookFunction("InventoryItemHasLock", HookPriority.OVERRIDE_BEHAVIOR, (args, next) => {
+            const [item] = args as [Item];
+            if (isFocused(item)) {
+                captureFromFocus(item);
+                return false;
+            }
+            return next(args);
+        });
+    }
 
     // 2) Once a new item lands in that group, re-apply the captured lock. Hooked at the
     //    lowest common point (CharacterAppearanceSetItem) plus InventoryWear, with a
