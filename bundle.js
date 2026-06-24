@@ -33002,19 +33002,41 @@ One of mods you are using is using an old version of SDK. It will work for now b
     ChatRoomCharacterUpdate(C3);
   }
   function loadLockKeeper() {
+    const isFocused = (item) => !!modStorage.cheats?.keepLockOnSwap && item != null && item === DialogFocusItem;
+    const captureFromFocus = (item) => {
+      const C3 = CharacterGetCurrent();
+      const group = item.Asset?.Group?.Name;
+      const lock = captureLock(item);
+      if (C3 && group && lock) {
+        pending = { member: C3.MemberNumber, group, lock, until: Date.now() + 3e4 };
+      }
+    };
     l3("InventoryItemHasEffect", f3.OVERRIDE_BEHAVIOR, (args, next) => {
       const [item, effect] = args;
-      if (modStorage.cheats?.keepLockOnSwap && effect === "Lock" && item != null && item === DialogFocusItem) {
-        const C3 = CharacterGetCurrent();
-        const group = item.Asset?.Group?.Name;
-        const lock = captureLock(item);
-        if (C3 && group && lock) {
-          pending = { member: C3.MemberNumber, group, lock, until: Date.now() + 3e4 };
-        }
+      if (effect === "Lock" && isFocused(item)) {
+        captureFromFocus(item);
         return false;
       }
       return next(args);
     });
+    l3("InventoryGetLock", f3.OVERRIDE_BEHAVIOR, (args, next) => {
+      const [item] = args;
+      if (isFocused(item)) {
+        captureFromFocus(item);
+        return null;
+      }
+      return next(args);
+    });
+    if (typeof globalThis.InventoryItemHasLock === "function") {
+      l3("InventoryItemHasLock", f3.OVERRIDE_BEHAVIOR, (args, next) => {
+        const [item] = args;
+        if (isFocused(item)) {
+          captureFromFocus(item);
+          return false;
+        }
+        return next(args);
+      });
+    }
     const restore = (args, next) => {
       const ret = next(args);
       if (modStorage.cheats?.keepLockOnSwap && pending && Date.now() <= pending.until) {
