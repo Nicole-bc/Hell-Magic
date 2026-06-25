@@ -1,5 +1,6 @@
 import { getNickname } from "zois-core";
 import { toastsManager } from "zois-core/popups";
+import { removeQuickMenu } from "@/modules/quickAccessMenu";
 import { BaseQAMSubscreen } from "./baseQAMSubscreen";
 
 
@@ -145,5 +146,27 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
             }
         });
         this.root.append(saveBtn);
+
+        // For complex items (modular chastity belts, vibrators, etc.) hand off to BC's
+        // own extended-item screen — it already knows how to configure every archetype.
+        if (item.Asset.Extended) {
+            const fullBtn = this.buildButton("Open full config menu");
+            fullBtn.addEventListener("click", () => {
+                const it = InventoryGet(Player, this.selectedGroup);
+                if (!it) {
+                    return toastsManager.error({ message: "Item no longer worn", duration: 3000 });
+                }
+                try {
+                    removeQuickMenu();
+                    CharacterSetCurrent(Player);
+                    DialogFocusItem = it;
+                    DialogFocusSourceItem = null;
+                    DialogExtendItem(it);
+                } catch {
+                    toastsManager.error({ message: "Couldn't open the menu (try inside a chatroom)", duration: 4000 });
+                }
+            });
+            this.root.append(fullBtn);
+        }
     }
 }
