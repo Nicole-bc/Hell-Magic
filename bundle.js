@@ -28066,6 +28066,25 @@ One of mods you are using is using an old version of SDK. It will work for now b
         }
       });
       this.root.append(saveBtn);
+      if (item.Asset.Extended) {
+        const fullBtn = this.buildButton("Open full config menu");
+        fullBtn.addEventListener("click", () => {
+          const it2 = InventoryGet(Player, this.selectedGroup);
+          if (!it2) {
+            return re.error({ message: "Item no longer worn", duration: 3e3 });
+          }
+          try {
+            removeQuickMenu();
+            CharacterSetCurrent(Player);
+            DialogFocusItem = it2;
+            DialogFocusSourceItem = null;
+            DialogExtendItem(it2);
+          } catch {
+            re.error({ message: "Couldn't open the menu (try inside a chatroom)", duration: 4e3 });
+          }
+        });
+        this.root.append(fullBtn);
+      }
     }
   };
 
