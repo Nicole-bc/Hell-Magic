@@ -24708,6 +24708,18 @@ One of mods you are using is using an old version of SDK. It will work for now b
     ["line", { x1: "6", x2: "6", y1: "9", y2: "21" }]
   ];
 
+  // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/hammer.js
+  var Hammer = [
+    ["path", { d: "m15 12-9.373 9.373a1 1 0 0 1-3.001-3L12 9" }],
+    ["path", { d: "m18 15 4-4" }],
+    [
+      "path",
+      {
+        d: "m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172v-.344a2 2 0 0 0-.586-1.414l-1.657-1.657A6 6 0 0 0 12.516 3H9l1.243 1.243A6 6 0 0 1 12 8.485V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5"
+      }
+    ]
+  ];
+
   // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/hand-coins.js
   var HandCoins = [
     ["path", { d: "M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17" }],
@@ -27927,6 +27939,116 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
   };
 
+  // src/qam-subscreens/itemEditorQAMSubscreen.ts
+  function allowedEffects(asset) {
+    const result = [];
+    try {
+      for (const [prop, allow] of CraftingPropertyMap.entries()) {
+        try {
+          if (allow(asset)) result.push(prop);
+        } catch {
+        }
+      }
+    } catch {
+    }
+    return result;
+  }
+  function currentEffectOf(item) {
+    const craft = item.Craft;
+    if (craft?.Effects && Object.keys(craft.Effects).length) return Object.keys(craft.Effects)[0];
+    return craft?.Property ?? "";
+  }
+  var ItemEditorQAMSubscreen = class extends BaseQAMSubscreen {
+    name = "Item Editor";
+    description = "Edit a worn restraint's name, description and crafted effect";
+    root;
+    selectedGroup = "";
+    load(container) {
+      super.load(container);
+      this.root = container;
+      this.render();
+    }
+    wornRestraints() {
+      return (Player.Appearance ?? []).filter((i6) => i6.Asset?.Group?.Category === "Item");
+    }
+    render() {
+      this.root.innerHTML = "";
+      const worn = this.wornRestraints();
+      if (worn.length === 0) {
+        this.root.append(this.buildText("You aren't wearing any restraints to edit."));
+        return;
+      }
+      if (!worn.some((i6) => i6.Asset.Group.Name === this.selectedGroup)) {
+        this.selectedGroup = worn[0].Asset.Group.Name;
+      }
+      this.root.append(this.buildText("Restraint to edit:"));
+      this.root.append(this.buildDropdown({
+        currentOption: this.selectedGroup,
+        options: worn.map((i6) => ({ name: i6.Asset.Group.Name, text: i6.Asset.Description })),
+        onChange: (v6) => {
+          this.selectedGroup = v6;
+          this.render();
+        }
+      }));
+      const item = InventoryGet(Player, this.selectedGroup);
+      if (!item) {
+        this.root.append(this.buildText("Could not read that item."));
+        return;
+      }
+      const nameInput = this.buildInput("Item name");
+      nameInput.value = item.Craft?.Name ?? item.Asset.Description;
+      const descInput = this.buildInput("Description text");
+      descInput.value = item.Craft?.Description ?? "";
+      let selectedEffect = currentEffectOf(item);
+      const effects = allowedEffects(item.Asset);
+      this.root.append(this.buildText("Crafted effect:"));
+      this.root.append(this.buildDropdown({
+        currentOption: selectedEffect,
+        options: [
+          { name: "", text: "\u2014 None \u2014" },
+          ...effects.map((e2) => ({ name: e2, text: e2 }))
+        ],
+        onChange: (v6) => {
+          selectedEffect = v6;
+        }
+      }));
+      this.root.append(nameInput, descInput);
+      const saveBtn = this.buildButton("Save");
+      saveBtn.addEventListener("click", () => {
+        const fresh = InventoryGet(Player, this.selectedGroup);
+        if (!fresh) {
+          return re.error({ message: "Item no longer worn", duration: 3e3 });
+        }
+        const base = fresh.Craft ?? {};
+        const craft = {
+          Item: fresh.Asset.Name,
+          Name: nameInput.value.trim() || fresh.Asset.Description,
+          Description: descInput.value.trim(),
+          Effects: selectedEffect ? { [selectedEffect]: 1 } : {},
+          Color: typeof fresh.Color === "string" ? fresh.Color : base.Color ?? "Default",
+          Lock: base.Lock ?? "",
+          Private: base.Private ?? false,
+          ItemProperty: base.ItemProperty ?? null,
+          TypeRecord: fresh.Property?.TypeRecord ?? base.TypeRecord ?? null,
+          MemberNumber: Player.MemberNumber,
+          MemberName: k3(Player)
+        };
+        if (CraftingValidate(craft, fresh.Asset) === CraftingStatusType.CRITICAL_ERROR) {
+          return re.error({ message: "That effect isn't valid for this item", duration: 3e3 });
+        }
+        try {
+          InventoryCraft(Player, Player, this.selectedGroup, craft, true);
+          ChatRoomCharacterUpdate(Player);
+          re.success({ message: "Item updated", duration: 3e3 });
+          this.render();
+        } catch {
+          re.error({ message: "Could not apply the changes", duration: 3e3 });
+        }
+      });
+      this.root.append(saveBtn);
+    }
+  };
+
   // src/qam-subscreens/exportAppearanceQAMSubscreen.ts
   var ExportAppearanceQAMSubscreen = class extends BaseQAMSubscreen {
     name = "Export Appearance";
@@ -30717,6 +30839,12 @@ One of mods you are using is using an old version of SDK. It will work for now b
       id: 1017,
       subscreen: new OutfitsQAMSubscreen(),
       icon: Shirt,
+      isBeta: true
+    },
+    {
+      id: 1018,
+      subscreen: new ItemEditorQAMSubscreen(),
+      icon: Hammer,
       isBeta: true
     }
   ];
@@ -34965,6 +35093,7 @@ lucide/dist/esm/icons/git-compare-arrows.js:
 lucide/dist/esm/icons/git-pull-request-arrow.js:
 lucide/dist/esm/icons/git-pull-request-closed.js:
 lucide/dist/esm/icons/git-pull-request.js:
+lucide/dist/esm/icons/hammer.js:
 lucide/dist/esm/icons/hand-coins.js:
 lucide/dist/esm/icons/hat-glasses.js:
 lucide/dist/esm/icons/heart.js:
