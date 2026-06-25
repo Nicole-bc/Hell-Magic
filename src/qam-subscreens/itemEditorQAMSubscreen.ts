@@ -1,6 +1,5 @@
 import { getNickname } from "zois-core";
 import { toastsManager } from "zois-core/popups";
-import { removeQuickMenu } from "@/modules/quickAccessMenu";
 import { BaseQAMSubscreen } from "./baseQAMSubscreen";
 
 
@@ -21,6 +20,13 @@ function currentEffectOf(item: Item): string {
     const craft = item.Craft;
     if (craft?.Effects && Object.keys(craft.Effects).length) return Object.keys(craft.Effects)[0];
     return (craft?.Property as string) ?? "";
+}
+
+// Hide just the QAM panel (so BC's native dialog is visible) WITHOUT removing the
+// floating QAM button — clicking the button re-shows the panel as normal.
+function hideQAMPanel(): void {
+    const panel = document.querySelector<HTMLDivElement>(".bccQAM");
+    if (panel) panel.style.display = "none";
 }
 
 export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
@@ -85,23 +91,9 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
             onChange: (v) => { selectedEffect = v; }
         }));
 
-        // Extended "mode" — typed items like earphones (noise-cancelling), gags, blindfolds.
-        const typedOptions = (TypedItemGetOptions(item.Asset.Group.Name, item.Asset.Name) ?? null) as
-            ({ Name: string; Property?: { Type?: string | null } }[] | null);
-        const currentType = item.Property?.Type ?? null;
-        let selectedMode = typedOptions?.find((o) => (o.Property?.Type ?? null) === currentType)?.Name ?? "";
-        if (typedOptions?.length) {
-            this.root.append(this.buildText("Mode:"));
-            this.root.append(this.buildDropdown<string>({
-                currentOption: selectedMode || typedOptions[0].Name,
-                options: typedOptions.map((o) => ({ name: o.Name, text: o.Name })),
-                onChange: (v) => { selectedMode = v; }
-            }));
-        }
-
         this.root.append(nameInput, descInput);
 
-        const saveBtn = this.buildButton("Save");
+        const saveBtn = this.buildButton("Save name / description / effect");
         saveBtn.addEventListener("click", () => {
             const fresh = InventoryGet(Player, this.selectedGroup);
             if (!fresh) {
@@ -122,22 +114,13 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
                 MemberName: getNickname(Player)
             };
 
-            const hasCraftEdits =
-                !!descInput.value.trim() ||
-                !!selectedEffect ||
-                (nameInput.value.trim() !== "" && nameInput.value.trim() !== fresh.Asset.Description);
-            const applyCraft = hasCraftEdits || !!fresh.Craft;
+            if (CraftingValidate(craft, fresh.Asset) === CraftingStatusType.CRITICAL_ERROR) {
+                return toastsManager.error({ message: "That effect isn't valid for this item", duration: 3000 });
+            }
 
             try {
-                if (applyCraft) {
-                    if (CraftingValidate(craft, fresh.Asset) === CraftingStatusType.CRITICAL_ERROR) {
-                        return toastsManager.error({ message: "That effect isn't valid for this item", duration: 3000 });
-                    }
-                    InventoryCraft(Player, Player, this.selectedGroup as AssetGroupItemName, craft, true);
-                }
-                if (typedOptions?.length && selectedMode) {
-                    TypedItemSetOptionByName(Player, fresh, selectedMode, false, null, true);
-                }
+                // PreConfigureItem = false keeps the item's current extended type intact.
+                InventoryCraft(Player, Player, this.selectedGroup as AssetGroupItemName, craft, true, false, false);
                 ChatRoomCharacterUpdate(Player);
                 toastsManager.success({ message: "Item updated", duration: 3000 });
                 this.render();
@@ -147,17 +130,18 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
         });
         this.root.append(saveBtn);
 
-        // For complex items (modular chastity belts, vibrators, etc.) hand off to BC's
-        // own extended-item screen — it already knows how to configure every archetype.
+        // Types / modes (earphones noise-cancelling, gag levels, modular chastity belts,
+        // vibrators, etc.) are configured through BC's own extended-item screen, which
+        // handles every archetype correctly.
         if (item.Asset.Extended) {
-            const fullBtn = this.buildButton("Open full config menu");
+            const fullBtn = this.buildButton("Open type / mode menu");
             fullBtn.addEventListener("click", () => {
                 const it = InventoryGet(Player, this.selectedGroup);
                 if (!it) {
                     return toastsManager.error({ message: "Item no longer worn", duration: 3000 });
                 }
                 try {
-                    removeQuickMenu();
+                    hideQAMPanel();
                     CharacterSetCurrent(Player);
                     DialogFocusItem = it;
                     DialogFocusSourceItem = null;
