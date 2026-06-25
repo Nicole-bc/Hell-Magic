@@ -549,6 +549,13 @@ function addCommit(sourceCharacter: Character, targetCharacter: Character) {
 
 export function loadQuickAccessMenu(): void {
     if (modStorage.qam?.enabled) createQAMButton();
+    // Self-heal: BC can clear the floating button when it opens a dialog/extended-item
+    // screen. If it's enabled but gone, put it back so it never silently disappears.
+    setInterval(() => {
+        if (modStorage.qam?.enabled && !document.querySelector(".bccQAMButton")) {
+            createQAMButton();
+        }
+    }, 1000);
     pingServer();
 
     addCommit(Player, Player);
