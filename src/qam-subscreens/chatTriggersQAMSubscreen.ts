@@ -1,4 +1,5 @@
 import { modStorage, syncStorage } from "@/modules/storage";
+import { getSavedOutfits } from "@/modules/outfitStorage";
 import { toastsManager } from "zois-core/popups";
 import { BaseQAMSubscreen } from "./baseQAMSubscreen";
 
@@ -29,7 +30,7 @@ export class ChatTriggersQAMSubscreen extends BaseQAMSubscreen {
 
             const label = document.createElement("p");
             label.style.cssText = "color: #e7d2c6; font-size: 1.1em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
-            label.textContent = t.phrase || "(no phrase)";
+            label.textContent = (t.phrase || "(no phrase)") + (t.outfit ? `  \u00b7  ${t.outfit}` : "");
 
             const removeBtn = this.buildButton("Remove");
             removeBtn.style.margin = "0";
@@ -46,7 +47,18 @@ export class ChatTriggersQAMSubscreen extends BaseQAMSubscreen {
 
         this.root.append(this.buildText("Add a trigger:"));
         const phraseInput = this.buildInput("Trigger emote, e.g. *snaps her fingers*");
-        const codeInput = this.buildInput("Outfit code (base64)");
+
+        let selectedOutfit = "";
+        const savedOutfits = getSavedOutfits();
+        const outfitDropdown = this.buildDropdown<string>({
+            currentOption: "",
+            options: [
+                { name: "", text: savedOutfits.length ? "\u2014 No outfit \u2014" : "\u2014 No saved outfits \u2014" },
+                ...savedOutfits.map((o) => ({ name: o.name, text: o.name }))
+            ],
+            onChange: (v) => { selectedOutfit = v; }
+        });
+
         const responseInput = this.buildInput("Response emote line");
         const addBtn = this.buildButton("Add trigger");
 
@@ -58,13 +70,13 @@ export class ChatTriggersQAMSubscreen extends BaseQAMSubscreen {
             modStorage.chatTriggers ??= [];
             modStorage.chatTriggers.push({
                 phrase,
-                code: codeInput.value.trim(),
-                response: responseInput.value.trim()
+                response: responseInput.value.trim(),
+                outfit: selectedOutfit || undefined
             });
             syncStorage();
             this.render();
         });
 
-        this.root.append(phraseInput, codeInput, responseInput, addBtn);
+        this.root.append(phraseInput, outfitDropdown, responseInput, addBtn);
     }
 }

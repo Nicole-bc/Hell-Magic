@@ -1,8 +1,8 @@
 import { hookFunction, HookPriority } from "zois-core/modsApi";
 import { messagesManager } from "zois-core/messaging";
 import { toastsManager } from "zois-core/popups";
-import { importAppearance, serverAppearanceBundleToAppearance } from "zois-core/wardrobe";
 import { modStorage } from "./storage";
+import { applyOutfit, getSavedOutfits } from "./outfitStorage";
 
 // Guard against re-entrancy: the response emote we send is itself a ChatRoomChat,
 // and we don't want it (or the outfit change) to re-trigger the hook.
@@ -13,21 +13,22 @@ function normalize(s: string | undefined): string {
     return (s ?? "").replace(/^\*+|\*+$/g, "").trim().toLowerCase();
 }
 
-function fireTrigger(trigger: { code: string; response: string }): void {
+function fireTrigger(trigger: { outfit?: string; code?: string; response: string }): void {
     firing = true;
     try {
-        if (trigger.code) {
+        // Resolve the outfit: a saved-library name takes priority, else a raw code.
+        let code = trigger.code;
+        if (trigger.outfit) {
+            code = getSavedOutfits().find((o) => o.name === trigger.outfit)?.code;
+        }
+        if (code) {
             try {
-                importAppearance(
-                    Player,
-                    serverAppearanceBundleToAppearance(
-                        Player.AssetFamily,
-                        JSON.parse(LZString.decompressFromBase64(trigger.code))
-                    )
-                );
+                applyOutfit(code);
             } catch {
                 toastsManager.error({ message: "Chat trigger: invalid outfit code", duration: 3000 });
             }
+        } else if (trigger.outfit) {
+            toastsManager.error({ message: `Chat trigger: outfit "${trigger.outfit}" not found`, duration: 3000 });
         }
         if (trigger.response) {
             messagesManager.sendAction(trigger.response);

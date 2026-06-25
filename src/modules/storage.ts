@@ -88,8 +88,9 @@ export interface ModStorage {
     // Chat-emote triggers: type a matching emote → apply an outfit + send a response emote.
     chatTriggers?: {
         phrase: string
-        code: string
         response: string
+        outfit?: string   // name of a saved outfit from the browser library
+        code?: string     // or a raw outfit code (legacy / manual)
     }[]
     version: string
 }
