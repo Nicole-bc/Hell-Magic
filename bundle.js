@@ -27666,59 +27666,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
   };
 
-  // src/qam-subscreens/importAppearanceQAMSubscreen.ts
-  var ImportAppearanceQAMSubscreen = class extends BaseQAMSubscreen {
-    name = "Import Appearance";
-    description = "Import appearance on target using base64 outfit code";
-    load(container) {
-      super.load(container);
-      let target = Player;
-      const input = this.buildInput("Code");
-      const select = this.buildCharacterSelect((C3) => {
-        target = C3;
-      });
-      const btn = this.buildButton("Import Appearance");
-      btn.addEventListener("click", () => {
-        if (!ServerChatRoomGetAllowItem(Player, target)) {
-          return re.error({ message: "Interactions are not allowed", duration: 3e3 });
-        }
-        try {
-          h2(
-            target,
-            v3(target.AssetFamily, JSON.parse(LZString.decompressFromBase64(input.value)))
-          );
-          re.success({
-            message: `Appearance was successfully imported on ${k3(target)}`,
-            duration: 4e3
-          });
-        } catch {
-          re.error({
-            title: "Oops!",
-            message: "Error occurred while trying to import appearance",
-            duration: 5e3
-          });
-        }
-      });
-      container.append(input, select, btn);
-    }
-  };
-
-  // src/qam-subscreens/lockKeeperQAMSubscreen.ts
-  var LockKeeperQAMSubscreen = class extends BaseQAMSubscreen {
-    name = "Lock Keeper";
-    description = "Keep a lock when switching the restraint under it";
-    load(container) {
-      super.load(container);
-      const keepLockCheckbox = this.buildCheckbox("Keep lock when switching restraint", modStorage.cheats?.keepLockOnSwap, (isChecked) => {
-        modStorage.cheats ??= {};
-        modStorage.cheats.keepLockOnSwap = isChecked;
-        syncStorage();
-      });
-      const hint = this.buildText("While on, a locked item can be opened and swapped, and the lock (code, owner and timer) is carried onto whatever you put there.");
-      container.append(keepLockCheckbox, hint);
-    }
-  };
-
   // src/modules/outfitStorage.ts
   var STORAGE_KEY = "HellMagicOutfits";
   function getSavedOutfits() {
@@ -27758,6 +27705,91 @@ One of mods you are using is using an old version of SDK. It will work for now b
       v3(Player.AssetFamily, JSON.parse(LZString.decompressFromBase64(code)))
     );
   }
+
+  // src/qam-subscreens/importAppearanceQAMSubscreen.ts
+  var ImportAppearanceQAMSubscreen = class extends BaseQAMSubscreen {
+    name = "Import Appearance";
+    description = "Import appearance on target using base64 outfit code";
+    load(container) {
+      super.load(container);
+      let target = Player;
+      let selectedOutfit = "";
+      const savedOutfits = getSavedOutfits();
+      const input = this.buildDropdown({
+        currentOption: "",
+        options: [
+          {
+            name: "",
+            text: savedOutfits.length ? "\u2014 No outfit \u2014" : "\u2014 No saved outfits \u2014"
+          },
+          ...savedOutfits.map((o4) => ({ name: o4.name, text: o4.name }))
+        ],
+        onChange: (v6) => {
+          selectedOutfit = v6;
+        }
+      });
+      const select = this.buildCharacterSelect((C3) => {
+        target = C3;
+      });
+      const reaction = this.buildInput("Reaction");
+      const btn = this.buildButton("Import Appearance");
+      btn.addEventListener("click", () => {
+        if (!ServerChatRoomGetAllowItem(Player, target)) {
+          return re.error({
+            message: "Interactions are not allowed",
+            duration: 3e3
+          });
+        }
+        try {
+          const outfit = savedOutfits.find((o4) => o4.name === selectedOutfit);
+          if (!outfit) {
+            return re.error({
+              message: "Please select a valid outfit",
+              duration: 3e3
+            });
+          }
+          h2(
+            target,
+            v3(
+              target.AssetFamily,
+              JSON.parse(LZString.decompressFromBase64(outfit.code))
+            )
+          );
+          const reactionText = reaction.value.trim();
+          if (reactionText) {
+            g.sendAction(reactionText);
+          }
+          re.success({
+            message: `Appearance was successfully imported on ${k3(target)}`,
+            duration: 4e3
+          });
+        } catch {
+          re.error({
+            title: "Oops!",
+            message: "Error occurred while trying to import appearance",
+            duration: 5e3
+          });
+        }
+      });
+      container.append(input, select, reaction, btn);
+    }
+  };
+
+  // src/qam-subscreens/lockKeeperQAMSubscreen.ts
+  var LockKeeperQAMSubscreen = class extends BaseQAMSubscreen {
+    name = "Lock Keeper";
+    description = "Keep a lock when switching the restraint under it";
+    load(container) {
+      super.load(container);
+      const keepLockCheckbox = this.buildCheckbox("Keep lock when switching restraint", modStorage.cheats?.keepLockOnSwap, (isChecked) => {
+        modStorage.cheats ??= {};
+        modStorage.cheats.keepLockOnSwap = isChecked;
+        syncStorage();
+      });
+      const hint = this.buildText("While on, a locked item can be opened and swapped, and the lock (code, owner and timer) is carried onto whatever you put there.");
+      container.append(keepLockCheckbox, hint);
+    }
+  };
 
   // src/qam-subscreens/chatTriggersQAMSubscreen.ts
   var ChatTriggersQAMSubscreen = class extends BaseQAMSubscreen {
