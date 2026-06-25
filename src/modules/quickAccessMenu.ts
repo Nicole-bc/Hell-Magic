@@ -1,5 +1,5 @@
 import mouthWateringIcon from "@/assets/game-icons/mouthWatering.svg";
-import { ClipboardCopy, ClipboardPaste, CopyPlus, Eye, Flame, GitCompareArrows, HatGlasses, type IconNode, Lock, LogOut, MapPinned, PersonStanding, Repeat, Shield, ShieldAlert, ShieldMinus, Shirt, Sparkles, Unlock, Wand } from "lucide";
+import { ClipboardCopy, ClipboardPaste, CopyPlus, Eye, Flame, GitCompareArrows, Hammer, HatGlasses, type IconNode, Lock, LogOut, MapPinned, PersonStanding, Repeat, Shield, ShieldAlert, ShieldMinus, Shirt, Sparkles, Unlock, Wand } from "lucide";
 import { getPlayer } from "zois-core";
 import { appearanceComparer, serverAppearanceBundleToAppearance } from "zois-core/wardrobe";
 import { modStorage } from "./storage";
@@ -12,6 +12,7 @@ import { ImportAppearanceQAMSubscreen } from "@/qam-subscreens/importAppearanceQ
 import { LockKeeperQAMSubscreen } from "@/qam-subscreens/lockKeeperQAMSubscreen";
 import { ChatTriggersQAMSubscreen } from "@/qam-subscreens/chatTriggersQAMSubscreen";
 import { OutfitsQAMSubscreen } from "@/qam-subscreens/outfitsQAMSubscreen";
+import { ItemEditorQAMSubscreen } from "@/qam-subscreens/itemEditorQAMSubscreen";
 import { ExportAppearanceQAMSubscreen } from "@/qam-subscreens/exportAppearanceQAMSubscreen";
 import { LeaveRoomQAMSubscreen } from "@/qam-subscreens/leaveRoomQAMSubscreen";
 import { TotalReleaseQAMSubscreen } from "@/qam-subscreens/totalReleaseQAMSubscreen";
@@ -427,6 +428,12 @@ export const qamFeatures: QAMFeature[] = [
         id: 1017,
         subscreen: new OutfitsQAMSubscreen(),
         icon: Shirt,
+        isBeta: true
+    },
+    {
+        id: 1018,
+        subscreen: new ItemEditorQAMSubscreen(),
+        icon: Hammer,
         isBeta: true
     }
 ];
