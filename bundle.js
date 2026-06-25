@@ -33175,7 +33175,9 @@ One of mods you are using is using an old version of SDK. It will work for now b
       try {
         if (!firing && args[0] === "ChatRoomChat") {
           const data = args[1];
-          if (typeof data?.Content === "string" && (data.Type === "Emote" || data.Type === "Action" || data.Type === "Chat")) {
+          const raw = typeof data?.Content === "string" ? data.Content.trim() : "";
+          const isEmote = data?.Type === "Emote" || raw.startsWith("*") && raw.endsWith("*");
+          if (raw && isEmote) {
             const content = normalize(data.Content);
             const triggers = modStorage.chatTriggers ?? [];
             for (const t3 of triggers) {
