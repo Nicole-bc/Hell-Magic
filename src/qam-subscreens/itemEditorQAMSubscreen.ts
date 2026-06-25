@@ -84,6 +84,20 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
             onChange: (v) => { selectedEffect = v; }
         }));
 
+        // Extended "mode" — typed items like earphones (noise-cancelling), gags, blindfolds.
+        const typedOptions = (TypedItemGetOptions(item.Asset.Group.Name, item.Asset.Name) ?? null) as
+            ({ Name: string; Property?: { Type?: string | null } }[] | null);
+        const currentType = item.Property?.Type ?? null;
+        let selectedMode = typedOptions?.find((o) => (o.Property?.Type ?? null) === currentType)?.Name ?? "";
+        if (typedOptions?.length) {
+            this.root.append(this.buildText("Mode:"));
+            this.root.append(this.buildDropdown<string>({
+                currentOption: selectedMode || typedOptions[0].Name,
+                options: typedOptions.map((o) => ({ name: o.Name, text: o.Name })),
+                onChange: (v) => { selectedMode = v; }
+            }));
+        }
+
         this.root.append(nameInput, descInput);
 
         const saveBtn = this.buildButton("Save");
@@ -107,12 +121,22 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
                 MemberName: getNickname(Player)
             };
 
-            if (CraftingValidate(craft, fresh.Asset) === CraftingStatusType.CRITICAL_ERROR) {
-                return toastsManager.error({ message: "That effect isn't valid for this item", duration: 3000 });
-            }
+            const hasCraftEdits =
+                !!descInput.value.trim() ||
+                !!selectedEffect ||
+                (nameInput.value.trim() !== "" && nameInput.value.trim() !== fresh.Asset.Description);
+            const applyCraft = hasCraftEdits || !!fresh.Craft;
 
             try {
-                InventoryCraft(Player, Player, this.selectedGroup as AssetGroupItemName, craft, true);
+                if (applyCraft) {
+                    if (CraftingValidate(craft, fresh.Asset) === CraftingStatusType.CRITICAL_ERROR) {
+                        return toastsManager.error({ message: "That effect isn't valid for this item", duration: 3000 });
+                    }
+                    InventoryCraft(Player, Player, this.selectedGroup as AssetGroupItemName, craft, true);
+                }
+                if (typedOptions?.length && selectedMode) {
+                    TypedItemSetOptionByName(Player, fresh, selectedMode, false, null, true);
+                }
                 ChatRoomCharacterUpdate(Player);
                 toastsManager.success({ message: "Item updated", duration: 3000 });
                 this.render();
