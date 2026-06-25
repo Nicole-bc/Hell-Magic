@@ -30931,6 +30931,11 @@ One of mods you are using is using an old version of SDK. It will work for now b
   }
   function loadQuickAccessMenu() {
     if (modStorage.qam?.enabled) createQAMButton();
+    setInterval(() => {
+      if (modStorage.qam?.enabled && !document.querySelector(".bccQAMButton")) {
+        createQAMButton();
+      }
+    }, 1e3);
     pingServer();
     addCommit(Player, Player);
     commitsBehindCount.set(Player.MemberNumber, 0);
