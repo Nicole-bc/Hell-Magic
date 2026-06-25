@@ -10,6 +10,7 @@ import { loadStorage } from "./modules/storage";
 import { loadChaosAura } from "./modules/chaosAura";
 import { loadAuraBreaker } from "./modules/auraBreaker";
 import { loadLockKeeper } from "./modules/lockKeeper";
+import { loadChatTriggers } from "./modules/chatTriggers";
 import { loadOverlay } from "./modules/overlay";
 import { loadDarkMagic } from "./modules/darkMagic";
 import { loadQuickAccessMenu } from "./modules/quickAccessMenu";
@@ -62,6 +63,7 @@ function start() {
     loadChaosAura();
     loadAuraBreaker();
     loadLockKeeper();
+    loadChatTriggers();
     loadOverlay();
     loadDarkMagic();
     addActivities();

@@ -8,8 +8,8 @@ const LOCK_PROPERTY_KEYS = [
     "MemberNumberListKeys", "Hidden"
 ];
 
-// The lock we captured off a locked item the moment it was opened for swapping.
-let pending: { member: number; group: string; lock: Record<string, any>; until: number } | null = null;
+// The item whose lock we've temporarily stripped to allow a swap.
+let temp: { C: Character; group: string; item: Item; lock: Record<string, any> } | null = null;
 
 function captureLock(item: Item | null | undefined): Record<string, any> | null {
     if (!item?.Property?.LockedBy) return null;
@@ -21,82 +21,86 @@ function captureLock(item: Item | null | undefined): Record<string, any> | null 
     return snap;
 }
 
-// Re-apply the captured lock to whatever item now sits in that group.
-function relock(C: Character, p: { member: number; group: string; lock: Record<string, any> }): void {
-    if (!C || C.MemberNumber !== p.member) return;
-    const item = InventoryGet(C, p.group);
-    if (!item || item.Property?.LockedBy) return; // group empty, or already locked
-    InventoryLock(C, item, p.lock.LockedBy as string, p.lock.LockMemberNumber ?? null, false);
-    item.Property = { ...(item.Property ?? {}), ...p.lock };
+// Write a captured lock back onto an item (the original on abandon, or the new one
+// after a swap) and sync it.
+function applyLock(C: Character, item: Item, lock: Record<string, any>): void {
+    if (!C || !item) return;
+    InventoryLock(C, item, lock.LockedBy as string, lock.LockMemberNumber ?? null, false);
+    item.Property = { ...(item.Property ?? {}), ...lock };
     CharacterRefresh(C, true, false);
     ChatRoomCharacterUpdate(C);
 }
 
+// While a locked item's menu is open, strip its lock LOCALLY (no server push) so the
+// change list isn't greyed out. Remembered so we can restore or transfer it.
+function stripForSwap(): void {
+    if (!modStorage.cheats?.keepLockOnSwap) return;
+    const item = DialogFocusItem;
+    const C = CharacterGetCurrent();
+    const group = item?.Asset?.Group?.Name;
+    if (!item || !C || !group || !item.Property?.LockedBy) return;
+    if (temp && temp.item === item) return; // already stripped
+    const lock = captureLock(item);
+    if (!lock) return;
+    temp = { C, group, item, lock };
+    delete (item.Property as Record<string, any>).LockedBy;
+    if (Array.isArray(item.Property.Effect)) {
+        item.Property.Effect = item.Property.Effect.filter((e) => e !== "Lock");
+    }
+    CharacterRefresh(C, false, false); // local only — don't broadcast the unlock
+}
+
+// Called when leaving the menu: if the item wasn't swapped, put its lock back.
+function finishTemp(): void {
+    if (!temp) return;
+    const { C, group, item, lock } = temp;
+    temp = null;
+    const current = InventoryGet(C, group);
+    if (current === item && !item.Property?.LockedBy) {
+        applyLock(C, item, lock); // not swapped → restore original lock
+    }
+}
+
 export function loadLockKeeper(): void {
-    // True only for the single item you're currently looking at, while the toggle is on.
-    const isFocused = (item: Item | null | undefined): boolean =>
-        !!modStorage.cheats?.keepLockOnSwap && item != null && item === DialogFocusItem;
-
-    // 1) Open a locked item for swapping. BC decides "this is locked, show the unlock
-    //    screen" via one of several lock checks, so we neutralise all of them for the
-    //    focused item only — and capture the lock here while it's still intact.
-    const captureFromFocus = (item: Item): void => {
-        const C = CharacterGetCurrent();
-        const group = item.Asset?.Group?.Name;
-        const lock = captureLock(item);
-        if (C && group && lock) {
-            pending = { member: C.MemberNumber, group, lock, until: Date.now() + 30000 };
-        }
-    };
-
-    hookFunction("InventoryItemHasEffect", HookPriority.OVERRIDE_BEHAVIOR, (args, next) => {
-        const [item, effect] = args as [Item, (string | undefined)?];
-        if (effect === "Lock" && isFocused(item)) {
-            captureFromFocus(item);
-            return false;
-        }
-        return next(args);
-    });
-
-    hookFunction("InventoryGetLock", HookPriority.OVERRIDE_BEHAVIOR, (args, next) => {
-        const [item] = args as [Item];
-        if (isFocused(item)) {
-            captureFromFocus(item);
-            return null;
-        }
-        return next(args);
-    });
-
-    if (typeof (globalThis as any).InventoryItemHasLock === "function") {
-        hookFunction("InventoryItemHasLock", HookPriority.OVERRIDE_BEHAVIOR, (args, next) => {
-            const [item] = args as [Item];
-            if (isFocused(item)) {
-                captureFromFocus(item);
-                return false;
-            }
+    // Strip the lock right before the item list is built, so it renders un-greyed.
+    if (typeof (globalThis as any).DialogInventoryBuild === "function") {
+        hookFunction("DialogInventoryBuild", HookPriority.OBSERVE, (args, next) => {
+            stripForSwap();
             return next(args);
         });
     }
 
-    // 2) Once a new item lands in that group, re-apply the captured lock. Hooked at the
-    //    lowest common point (CharacterAppearanceSetItem) plus InventoryWear, with a
-    //    deferred re-assert to survive the dialog's own follow-up sync.
-    const restore: Parameters<typeof hookFunction>[2] = (args, next) => {
+    // A new item landed in the group → transfer the captured lock to it.
+    const onItemSet: Parameters<typeof hookFunction>[2] = (args, next) => {
         const ret = next(args);
-        if (modStorage.cheats?.keepLockOnSwap && pending && Date.now() <= pending.until) {
+        if (temp) {
             const C = args[0] as Character;
-            if (C?.MemberNumber === pending.member) {
-                const p = pending;
-                pending = null;
-                relock(C, p);
-                setTimeout(() => relock(C, p), 150);
+            if (C?.MemberNumber === temp.C.MemberNumber) {
+                const current = InventoryGet(C, temp.group);
+                if (current && current !== temp.item && !current.Property?.LockedBy) {
+                    const lock = temp.lock;
+                    temp = null;
+                    applyLock(C, current, lock);
+                    setTimeout(() => {
+                        if (current && !current.Property?.LockedBy) applyLock(C, current, lock);
+                    }, 150);
+                }
             }
         }
         return ret;
     };
-
     if (typeof (globalThis as any).CharacterAppearanceSetItem === "function") {
-        hookFunction("CharacterAppearanceSetItem", HookPriority.OBSERVE, restore);
+        hookFunction("CharacterAppearanceSetItem", HookPriority.OBSERVE, onItemSet);
     }
-    hookFunction("InventoryWear", HookPriority.OBSERVE, restore);
+    hookFunction("InventoryWear", HookPriority.OBSERVE, onItemSet);
+
+    // Leaving the menu without swapping → restore the original lock.
+    for (const fn of ["DialogLeaveItemMenu", "DialogLeaveFocusItem", "DialogLeave"]) {
+        if (typeof (globalThis as any)[fn] === "function") {
+            hookFunction(fn, HookPriority.OBSERVE, (args, next) => {
+                finishTemp();
+                return next(args);
+            });
+        }
+    }
 }

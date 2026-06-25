@@ -85,6 +85,12 @@ export interface ModStorage {
             spells?: (ModStorage["darkMagic"]["spells"][0] & { castedBy: { name: string, id: number } })[]
         }
     }
+    // Chat-emote triggers: type a matching emote → apply an outfit + send a response emote.
+    chatTriggers?: {
+        phrase: string
+        code: string
+        response: string
+    }[]
     version: string
 }
 
