@@ -6006,8 +6006,8 @@ One of mods you are using is using an old version of SDK. It will work for now b
             var lane = concurrentQueues[i6];
             concurrentQueues[i6++] = null;
             if (null !== queue && null !== update) {
-              var pending2 = queue.pending;
-              null === pending2 ? update.next = update : (update.next = pending2.next, pending2.next = update);
+              var pending = queue.pending;
+              null === pending ? update.next = update : (update.next = pending.next, pending.next = update);
               queue.pending = update;
             }
             0 !== lane && markUpdateLaneFromFiberToRoot(fiber, update, lane);
@@ -9384,8 +9384,8 @@ One of mods you are using is using an old version of SDK. It will work for now b
         }
         function enqueueRenderPhaseUpdate(queue, update) {
           didScheduleRenderPhaseUpdateDuringThisPass = didScheduleRenderPhaseUpdate = true;
-          var pending2 = queue.pending;
-          null === pending2 ? update.next = update : (update.next = pending2.next, pending2.next = update);
+          var pending = queue.pending;
+          null === pending ? update.next = update : (update.next = pending.next, pending.next = update);
           queue.pending = update;
         }
         function entangleTransitionUpdate(root2, queue, lane) {
@@ -16065,13 +16065,13 @@ One of mods you are using is using an old version of SDK. It will work for now b
           return sanitizeURL("" + actionProp);
         }
         function createFormDataWithSubmitter(form, submitter) {
-          var temp = submitter.ownerDocument.createElement("input");
-          temp.name = submitter.name;
-          temp.value = submitter.value;
-          form.id && temp.setAttribute("form", form.id);
-          submitter.parentNode.insertBefore(temp, submitter);
+          var temp2 = submitter.ownerDocument.createElement("input");
+          temp2.name = submitter.name;
+          temp2.value = submitter.value;
+          form.id && temp2.setAttribute("form", form.id);
+          submitter.parentNode.insertBefore(temp2, submitter);
           form = new FormData(form);
-          temp.parentNode.removeChild(temp);
+          temp2.parentNode.removeChild(temp2);
           return form;
         }
         function extractEvents$1(dispatchQueue, domEventName, maybeTargetInst, nativeEvent, nativeEventTarget) {
@@ -24873,6 +24873,19 @@ One of mods you are using is using an old version of SDK. It will work for now b
     ["path", { d: "M9 12h6" }]
   ];
 
+  // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/sparkles.js
+  var Sparkles = [
+    [
+      "path",
+      {
+        d: "M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"
+      }
+    ],
+    ["path", { d: "M20 2v4" }],
+    ["path", { d: "M22 4h-4" }],
+    ["circle", { cx: "4", cy: "20", r: "2" }]
+  ];
+
   // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/target.js
   var Target = [
     ["circle", { cx: "12", cy: "12", r: "10" }],
@@ -27696,6 +27709,63 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
   };
 
+  // src/qam-subscreens/chatTriggersQAMSubscreen.ts
+  var ChatTriggersQAMSubscreen = class extends BaseQAMSubscreen {
+    name = "Chat Triggers";
+    description = "Type an emote to swap your outfit and send a response emote";
+    root;
+    load(container) {
+      super.load(container);
+      this.root = container;
+      this.render();
+    }
+    render() {
+      this.root.innerHTML = "";
+      this.root.append(this.buildText("Your triggers:"));
+      const triggers = modStorage.chatTriggers ?? [];
+      if (triggers.length === 0) {
+        this.root.append(this.buildText("None yet \u2014 add one below."));
+      }
+      triggers.forEach((t3, i6) => {
+        const row = document.createElement("div");
+        row.style.cssText = "display: flex; align-items: center; justify-content: space-between; column-gap: 0.5em; margin: 0.25em 1em;";
+        const label = document.createElement("p");
+        label.style.cssText = "color: #e7d2c6; font-size: 1.1em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+        label.textContent = t3.phrase || "(no phrase)";
+        const removeBtn = this.buildButton("Remove");
+        removeBtn.style.margin = "0";
+        removeBtn.style.flexShrink = "0";
+        removeBtn.addEventListener("click", () => {
+          modStorage.chatTriggers?.splice(i6, 1);
+          syncStorage();
+          this.render();
+        });
+        row.append(label, removeBtn);
+        this.root.append(row);
+      });
+      this.root.append(this.buildText("Add a trigger:"));
+      const phraseInput = this.buildInput("Trigger emote, e.g. *snaps her fingers*");
+      const codeInput = this.buildInput("Outfit code (base64)");
+      const responseInput = this.buildInput("Response emote line");
+      const addBtn = this.buildButton("Add trigger");
+      addBtn.addEventListener("click", () => {
+        const phrase = phraseInput.value.trim();
+        if (!phrase) {
+          return re.error({ message: "Set a trigger phrase", duration: 3e3 });
+        }
+        modStorage.chatTriggers ??= [];
+        modStorage.chatTriggers.push({
+          phrase,
+          code: codeInput.value.trim(),
+          response: responseInput.value.trim()
+        });
+        syncStorage();
+        this.render();
+      });
+      this.root.append(phraseInput, codeInput, responseInput, addBtn);
+    }
+  };
+
   // src/qam-subscreens/exportAppearanceQAMSubscreen.ts
   var ExportAppearanceQAMSubscreen = class extends BaseQAMSubscreen {
     name = "Export Appearance";
@@ -30475,6 +30545,12 @@ One of mods you are using is using an old version of SDK. It will work for now b
       subscreen: new LockKeeperQAMSubscreen(),
       icon: Repeat,
       isBeta: true
+    },
+    {
+      id: 1016,
+      subscreen: new ChatTriggersQAMSubscreen(),
+      icon: Sparkles,
+      isBeta: true
     }
   ];
   function createQAMButton() {
@@ -32982,7 +33058,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
     "MemberNumberListKeys",
     "Hidden"
   ];
-  var pending = null;
+  var temp = null;
   function captureLock(item) {
     if (!item?.Property?.LockedBy) return null;
     const snap = {};
@@ -32992,68 +33068,129 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
     return snap;
   }
-  function relock(C3, p5) {
-    if (!C3 || C3.MemberNumber !== p5.member) return;
-    const item = InventoryGet(C3, p5.group);
-    if (!item || item.Property?.LockedBy) return;
-    InventoryLock(C3, item, p5.lock.LockedBy, p5.lock.LockMemberNumber ?? null, false);
-    item.Property = { ...item.Property ?? {}, ...p5.lock };
+  function applyLock(C3, item, lock) {
+    if (!C3 || !item) return;
+    InventoryLock(C3, item, lock.LockedBy, lock.LockMemberNumber ?? null, false);
+    item.Property = { ...item.Property ?? {}, ...lock };
     CharacterRefresh(C3, true, false);
     ChatRoomCharacterUpdate(C3);
   }
+  function stripForSwap() {
+    if (!modStorage.cheats?.keepLockOnSwap) return;
+    const item = DialogFocusItem;
+    const C3 = CharacterGetCurrent();
+    const group = item?.Asset?.Group?.Name;
+    if (!item || !C3 || !group || !item.Property?.LockedBy) return;
+    if (temp && temp.item === item) return;
+    const lock = captureLock(item);
+    if (!lock) return;
+    temp = { C: C3, group, item, lock };
+    delete item.Property.LockedBy;
+    if (Array.isArray(item.Property.Effect)) {
+      item.Property.Effect = item.Property.Effect.filter((e2) => e2 !== "Lock");
+    }
+    CharacterRefresh(C3, false, false);
+  }
+  function finishTemp() {
+    if (!temp) return;
+    const { C: C3, group, item, lock } = temp;
+    temp = null;
+    const current = InventoryGet(C3, group);
+    if (current === item && !item.Property?.LockedBy) {
+      applyLock(C3, item, lock);
+    }
+  }
   function loadLockKeeper() {
-    const isFocused = (item) => !!modStorage.cheats?.keepLockOnSwap && item != null && item === DialogFocusItem;
-    const captureFromFocus = (item) => {
-      const C3 = CharacterGetCurrent();
-      const group = item.Asset?.Group?.Name;
-      const lock = captureLock(item);
-      if (C3 && group && lock) {
-        pending = { member: C3.MemberNumber, group, lock, until: Date.now() + 3e4 };
-      }
-    };
-    l3("InventoryItemHasEffect", f3.OVERRIDE_BEHAVIOR, (args, next) => {
-      const [item, effect] = args;
-      if (effect === "Lock" && isFocused(item)) {
-        captureFromFocus(item);
-        return false;
-      }
-      return next(args);
-    });
-    l3("InventoryGetLock", f3.OVERRIDE_BEHAVIOR, (args, next) => {
-      const [item] = args;
-      if (isFocused(item)) {
-        captureFromFocus(item);
-        return null;
-      }
-      return next(args);
-    });
-    if (typeof globalThis.InventoryItemHasLock === "function") {
-      l3("InventoryItemHasLock", f3.OVERRIDE_BEHAVIOR, (args, next) => {
-        const [item] = args;
-        if (isFocused(item)) {
-          captureFromFocus(item);
-          return false;
-        }
+    if (typeof globalThis.DialogInventoryBuild === "function") {
+      l3("DialogInventoryBuild", f3.OBSERVE, (args, next) => {
+        stripForSwap();
         return next(args);
       });
     }
-    const restore = (args, next) => {
+    const onItemSet = (args, next) => {
       const ret = next(args);
-      if (modStorage.cheats?.keepLockOnSwap && pending && Date.now() <= pending.until) {
+      if (temp) {
         const C3 = args[0];
-        if (C3?.MemberNumber === pending.member) {
-          const p5 = pending;
-          pending = null;
-          relock(C3, p5);
-          setTimeout(() => relock(C3, p5), 150);
+        if (C3?.MemberNumber === temp.C.MemberNumber) {
+          const current = InventoryGet(C3, temp.group);
+          if (current && current !== temp.item && !current.Property?.LockedBy) {
+            const lock = temp.lock;
+            temp = null;
+            applyLock(C3, current, lock);
+            setTimeout(() => {
+              if (current && !current.Property?.LockedBy) applyLock(C3, current, lock);
+            }, 150);
+          }
         }
       }
       return ret;
     };
     if (typeof globalThis.CharacterAppearanceSetItem === "function") {
-      l3("CharacterAppearanceSetItem", f3.OBSERVE, restore);
+      l3("CharacterAppearanceSetItem", f3.OBSERVE, onItemSet);
     }
-    l3("InventoryWear", f3.OBSERVE, restore);
+    l3("InventoryWear", f3.OBSERVE, onItemSet);
+    for (const fn of ["DialogLeaveItemMenu", "DialogLeaveFocusItem", "DialogLeave"]) {
+      if (typeof globalThis[fn] === "function") {
+        l3(fn, f3.OBSERVE, (args, next) => {
+          finishTemp();
+          return next(args);
+        });
+      }
+    }
+  }
+
+  // src/modules/chatTriggers.ts
+  var firing = false;
+  function normalize(s5) {
+    return (s5 ?? "").replace(/^\*+|\*+$/g, "").trim().toLowerCase();
+  }
+  function fireTrigger(trigger) {
+    firing = true;
+    try {
+      if (trigger.code) {
+        try {
+          h2(
+            Player,
+            v3(
+              Player.AssetFamily,
+              JSON.parse(LZString.decompressFromBase64(trigger.code))
+            )
+          );
+        } catch {
+          re.error({ message: "Chat trigger: invalid outfit code", duration: 3e3 });
+        }
+      }
+      if (trigger.response) {
+        g.sendAction(trigger.response);
+      }
+    } finally {
+      setTimeout(() => {
+        firing = false;
+      }, 0);
+    }
+  }
+  function loadChatTriggers() {
+    l3("ServerSend", f3.OBSERVE, (args, next) => {
+      const ret = next(args);
+      try {
+        if (!firing && args[0] === "ChatRoomChat") {
+          const data = args[1];
+          if (typeof data?.Content === "string" && (data.Type === "Emote" || data.Type === "Action" || data.Type === "Chat")) {
+            const content = normalize(data.Content);
+            const triggers = modStorage.chatTriggers ?? [];
+            for (const t3 of triggers) {
+              const phrase = normalize(t3.phrase);
+              if (phrase && content.includes(phrase)) {
+                fireTrigger(t3);
+                break;
+              }
+            }
+          }
+        }
+      } catch {
+      }
+      return ret;
+    });
   }
 
   // src/modules/overlay.ts
@@ -34525,6 +34662,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
     loadChaosAura();
     loadAuraBreaker();
     loadLockKeeper();
+    loadChatTriggers();
     loadOverlay();
     loadDarkMagic();
     addActivities();
@@ -34675,6 +34813,7 @@ lucide/dist/esm/icons/send-to-back.js:
 lucide/dist/esm/icons/settings.js:
 lucide/dist/esm/icons/shield-alert.js:
 lucide/dist/esm/icons/shield-minus.js:
+lucide/dist/esm/icons/sparkles.js:
 lucide/dist/esm/icons/target.js:
 lucide/dist/esm/icons/trash-2.js:
 lucide/dist/esm/icons/wand.js:
