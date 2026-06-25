@@ -24873,6 +24873,16 @@ One of mods you are using is using an old version of SDK. It will work for now b
     ["path", { d: "M9 12h6" }]
   ];
 
+  // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/shirt.js
+  var Shirt = [
+    [
+      "path",
+      {
+        d: "M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"
+      }
+    ]
+  ];
+
   // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/sparkles.js
   var Sparkles = [
     [
@@ -27709,6 +27719,46 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
   };
 
+  // src/modules/outfitStorage.ts
+  var STORAGE_KEY = "HellMagicOutfits";
+  function getSavedOutfits() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  function writeOutfits(outfits) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(outfits));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function captureCurrentOutfitCode() {
+    return LZString.compressToBase64(JSON.stringify(ServerAppearanceBundle(Player.Appearance)));
+  }
+  function saveOutfit(name, code) {
+    const outfits = getSavedOutfits();
+    outfits.push({ name, code });
+    return writeOutfits(outfits);
+  }
+  function deleteOutfit(index) {
+    const outfits = getSavedOutfits();
+    if (index < 0 || index >= outfits.length) return false;
+    outfits.splice(index, 1);
+    return writeOutfits(outfits);
+  }
+  function applyOutfit(code) {
+    h2(
+      Player,
+      v3(Player.AssetFamily, JSON.parse(LZString.decompressFromBase64(code)))
+    );
+  }
+
   // src/qam-subscreens/chatTriggersQAMSubscreen.ts
   var ChatTriggersQAMSubscreen = class extends BaseQAMSubscreen {
     name = "Chat Triggers";
@@ -27731,7 +27781,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
         row.style.cssText = "display: flex; align-items: center; justify-content: space-between; column-gap: 0.5em; margin: 0.25em 1em;";
         const label = document.createElement("p");
         label.style.cssText = "color: #e7d2c6; font-size: 1.1em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
-        label.textContent = t3.phrase || "(no phrase)";
+        label.textContent = (t3.phrase || "(no phrase)") + (t3.outfit ? `  \xB7  ${t3.outfit}` : "");
         const removeBtn = this.buildButton("Remove");
         removeBtn.style.margin = "0";
         removeBtn.style.flexShrink = "0";
@@ -27745,7 +27795,18 @@ One of mods you are using is using an old version of SDK. It will work for now b
       });
       this.root.append(this.buildText("Add a trigger:"));
       const phraseInput = this.buildInput("Trigger emote, e.g. *snaps her fingers*");
-      const codeInput = this.buildInput("Outfit code (base64)");
+      let selectedOutfit = "";
+      const savedOutfits = getSavedOutfits();
+      const outfitDropdown = this.buildDropdown({
+        currentOption: "",
+        options: [
+          { name: "", text: savedOutfits.length ? "\u2014 No outfit \u2014" : "\u2014 No saved outfits \u2014" },
+          ...savedOutfits.map((o4) => ({ name: o4.name, text: o4.name }))
+        ],
+        onChange: (v6) => {
+          selectedOutfit = v6;
+        }
+      });
       const responseInput = this.buildInput("Response emote line");
       const addBtn = this.buildButton("Add trigger");
       addBtn.addEventListener("click", () => {
@@ -27756,13 +27817,81 @@ One of mods you are using is using an old version of SDK. It will work for now b
         modStorage.chatTriggers ??= [];
         modStorage.chatTriggers.push({
           phrase,
-          code: codeInput.value.trim(),
-          response: responseInput.value.trim()
+          response: responseInput.value.trim(),
+          outfit: selectedOutfit || void 0
         });
         syncStorage();
         this.render();
       });
-      this.root.append(phraseInput, codeInput, responseInput, addBtn);
+      this.root.append(phraseInput, outfitDropdown, responseInput, addBtn);
+    }
+  };
+
+  // src/qam-subscreens/outfitsQAMSubscreen.ts
+  var OutfitsQAMSubscreen = class extends BaseQAMSubscreen {
+    name = "Outfits";
+    description = "Save outfits in this browser and apply them later";
+    root;
+    load(container) {
+      super.load(container);
+      this.root = container;
+      this.render();
+    }
+    render() {
+      this.root.innerHTML = "";
+      this.root.append(this.buildText("Saved outfits (this browser only):"));
+      const outfits = getSavedOutfits();
+      if (outfits.length === 0) {
+        this.root.append(this.buildText("None saved yet."));
+      }
+      outfits.forEach((o4, i6) => {
+        const row = document.createElement("div");
+        row.style.cssText = "display: flex; align-items: center; column-gap: 0.5em; margin: 0.25em 1em;";
+        const label = document.createElement("p");
+        label.style.cssText = "color: #e7d2c6; font-size: 1.1em; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+        label.textContent = o4.name;
+        const applyBtn = this.buildButton("Apply");
+        applyBtn.style.margin = "0";
+        applyBtn.addEventListener("click", () => {
+          try {
+            applyOutfit(o4.code);
+            re.success({ message: `Applied "${o4.name}"`, duration: 3e3 });
+          } catch {
+            re.error({ message: "Invalid outfit code", duration: 3e3 });
+          }
+        });
+        const copyBtn = this.buildButton("Copy code");
+        copyBtn.style.margin = "0";
+        copyBtn.addEventListener("click", () => {
+          navigator.clipboard?.writeText(o4.code);
+          re.success({ message: "Code copied", duration: 2e3 });
+        });
+        const delBtn = this.buildButton("Delete");
+        delBtn.style.margin = "0";
+        delBtn.addEventListener("click", () => {
+          deleteOutfit(i6);
+          this.render();
+        });
+        row.append(label, applyBtn, copyBtn, delBtn);
+        this.root.append(row);
+      });
+      this.root.append(this.buildText("Save your current look:"));
+      const nameInput = this.buildInput("Outfit name");
+      const saveBtn = this.buildButton("Save current outfit");
+      saveBtn.addEventListener("click", () => {
+        const name = nameInput.value.trim();
+        if (!name) {
+          return re.error({ message: "Enter a name", duration: 3e3 });
+        }
+        const ok = saveOutfit(name, captureCurrentOutfitCode());
+        if (ok) {
+          re.success({ message: `Saved "${name}"`, duration: 3e3 });
+          this.render();
+        } else {
+          re.error({ message: "Could not save (browser storage full?)", duration: 3e3 });
+        }
+      });
+      this.root.append(nameInput, saveBtn);
     }
   };
 
@@ -30551,6 +30680,12 @@ One of mods you are using is using an old version of SDK. It will work for now b
       subscreen: new ChatTriggersQAMSubscreen(),
       icon: Sparkles,
       isBeta: true
+    },
+    {
+      id: 1017,
+      subscreen: new OutfitsQAMSubscreen(),
+      icon: Shirt,
+      isBeta: true
     }
   ];
   function createQAMButton() {
@@ -33147,18 +33282,18 @@ One of mods you are using is using an old version of SDK. It will work for now b
   function fireTrigger(trigger) {
     firing = true;
     try {
-      if (trigger.code) {
+      let code = trigger.code;
+      if (trigger.outfit) {
+        code = getSavedOutfits().find((o4) => o4.name === trigger.outfit)?.code;
+      }
+      if (code) {
         try {
-          h2(
-            Player,
-            v3(
-              Player.AssetFamily,
-              JSON.parse(LZString.decompressFromBase64(trigger.code))
-            )
-          );
+          applyOutfit(code);
         } catch {
           re.error({ message: "Chat trigger: invalid outfit code", duration: 3e3 });
         }
+      } else if (trigger.outfit) {
+        re.error({ message: `Chat trigger: outfit "${trigger.outfit}" not found`, duration: 3e3 });
       }
       if (trigger.response) {
         g.sendAction(trigger.response);
@@ -34815,6 +34950,7 @@ lucide/dist/esm/icons/send-to-back.js:
 lucide/dist/esm/icons/settings.js:
 lucide/dist/esm/icons/shield-alert.js:
 lucide/dist/esm/icons/shield-minus.js:
+lucide/dist/esm/icons/shirt.js:
 lucide/dist/esm/icons/sparkles.js:
 lucide/dist/esm/icons/target.js:
 lucide/dist/esm/icons/trash-2.js:
