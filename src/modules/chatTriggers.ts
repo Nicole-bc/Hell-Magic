@@ -44,10 +44,12 @@ export function loadChatTriggers(): void {
         try {
             if (!firing && args[0] === "ChatRoomChat") {
                 const data = args[1] as { Content?: string; Type?: string };
-                if (
-                    typeof data?.Content === "string" &&
-                    (data.Type === "Emote" || data.Type === "Action" || data.Type === "Chat")
-                ) {
+                const raw = typeof data?.Content === "string" ? data.Content.trim() : "";
+                // Only react to action/emote messages (the *...* kind, sent as type
+                // "Emote"), never to normal chat. The asterisk check is a fallback in
+                // case an emote arrives typed as plain text.
+                const isEmote = data?.Type === "Emote" || (raw.startsWith("*") && raw.endsWith("*"));
+                if (raw && isEmote) {
                     const content = normalize(data.Content);
                     const triggers = modStorage.chatTriggers ?? [];
                     for (const t of triggers) {
