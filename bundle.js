@@ -28012,6 +28012,19 @@ One of mods you are using is using an old version of SDK. It will work for now b
           selectedEffect = v6;
         }
       }));
+      const typedOptions = TypedItemGetOptions(item.Asset.Group.Name, item.Asset.Name) ?? null;
+      const currentType = item.Property?.Type ?? null;
+      let selectedMode = typedOptions?.find((o4) => (o4.Property?.Type ?? null) === currentType)?.Name ?? "";
+      if (typedOptions?.length) {
+        this.root.append(this.buildText("Mode:"));
+        this.root.append(this.buildDropdown({
+          currentOption: selectedMode || typedOptions[0].Name,
+          options: typedOptions.map((o4) => ({ name: o4.Name, text: o4.Name })),
+          onChange: (v6) => {
+            selectedMode = v6;
+          }
+        }));
+      }
       this.root.append(nameInput, descInput);
       const saveBtn = this.buildButton("Save");
       saveBtn.addEventListener("click", () => {
@@ -28033,11 +28046,18 @@ One of mods you are using is using an old version of SDK. It will work for now b
           MemberNumber: Player.MemberNumber,
           MemberName: k3(Player)
         };
-        if (CraftingValidate(craft, fresh.Asset) === CraftingStatusType.CRITICAL_ERROR) {
-          return re.error({ message: "That effect isn't valid for this item", duration: 3e3 });
-        }
+        const hasCraftEdits = !!descInput.value.trim() || !!selectedEffect || nameInput.value.trim() !== "" && nameInput.value.trim() !== fresh.Asset.Description;
+        const applyCraft = hasCraftEdits || !!fresh.Craft;
         try {
-          InventoryCraft(Player, Player, this.selectedGroup, craft, true);
+          if (applyCraft) {
+            if (CraftingValidate(craft, fresh.Asset) === CraftingStatusType.CRITICAL_ERROR) {
+              return re.error({ message: "That effect isn't valid for this item", duration: 3e3 });
+            }
+            InventoryCraft(Player, Player, this.selectedGroup, craft, true);
+          }
+          if (typedOptions?.length && selectedMode) {
+            TypedItemSetOptionByName(Player, fresh, selectedMode, false, null, true);
+          }
           ChatRoomCharacterUpdate(Player);
           re.success({ message: "Item updated", duration: 3e3 });
           this.render();
