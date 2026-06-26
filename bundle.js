@@ -6006,8 +6006,8 @@ One of mods you are using is using an old version of SDK. It will work for now b
             var lane = concurrentQueues[i6];
             concurrentQueues[i6++] = null;
             if (null !== queue && null !== update) {
-              var pending = queue.pending;
-              null === pending ? update.next = update : (update.next = pending.next, pending.next = update);
+              var pending2 = queue.pending;
+              null === pending2 ? update.next = update : (update.next = pending2.next, pending2.next = update);
               queue.pending = update;
             }
             0 !== lane && markUpdateLaneFromFiberToRoot(fiber, update, lane);
@@ -9384,8 +9384,8 @@ One of mods you are using is using an old version of SDK. It will work for now b
         }
         function enqueueRenderPhaseUpdate(queue, update) {
           didScheduleRenderPhaseUpdateDuringThisPass = didScheduleRenderPhaseUpdate = true;
-          var pending = queue.pending;
-          null === pending ? update.next = update : (update.next = pending.next, pending.next = update);
+          var pending2 = queue.pending;
+          null === pending2 ? update.next = update : (update.next = pending2.next, pending2.next = update);
           queue.pending = update;
         }
         function entangleTransitionUpdate(root2, queue, lane) {
@@ -27939,6 +27939,53 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
   };
 
+  // src/modules/itemEditorLockBypass.ts
+  var LOCK_KEYS = [
+    "LockedBy",
+    "LockMemberNumber",
+    "Password",
+    "CombinationNumber",
+    "LockPickSeed",
+    "RemoveTimer",
+    "MaxTimer",
+    "ShowTimer",
+    "RemoveItem",
+    "MemberNumberListKeys",
+    "Hidden"
+  ];
+  var pending = null;
+  function captureLock(item) {
+    if (!item?.Property?.LockedBy) return null;
+    const snap = {};
+    const prop = item.Property;
+    for (const k6 of LOCK_KEYS) {
+      if (prop[k6] !== void 0) snap[k6] = JSON.parse(JSON.stringify(prop[k6]));
+    }
+    return snap;
+  }
+  function stripLockLocal(item) {
+    if (!item?.Property) return;
+    delete item.Property.LockedBy;
+    if (Array.isArray(item.Property.Effect)) {
+      item.Property.Effect = item.Property.Effect.filter((e2) => e2 !== "Lock");
+    }
+  }
+  function applyLockLocal(item, lock) {
+    item.Property = { ...item.Property ?? {}, ...lock };
+  }
+  function beginInlineUnlock(item) {
+    const lock = captureLock(item);
+    if (lock) stripLockLocal(item);
+    return lock;
+  }
+  function beginMenuUnlock(target, item) {
+    const lock = captureLock(item);
+    if (!lock) return;
+    pending = { target, group: item.Asset.Group.Name, lock };
+    stripLockLocal(item);
+    CharacterRefresh(target, false, false);
+  }
+
   // src/qam-subscreens/itemEditorQAMSubscreen.ts
   function allowedEffects(asset) {
     const result = [];
@@ -27966,20 +28013,30 @@ One of mods you are using is using an old version of SDK. It will work for now b
     name = "Item Editor";
     description = "Edit a worn restraint's name, description and crafted effect";
     root;
+    target = Player;
     selectedGroup = "";
     load(container) {
       super.load(container);
       this.root = container;
+      this.target = Player;
       this.render();
     }
     wornRestraints() {
-      return (Player.Appearance ?? []).filter((i6) => i6.Asset?.Group?.Category === "Item");
+      return (this.target.Appearance ?? []).filter((i6) => i6.Asset?.Group?.Category === "Item");
     }
     render() {
       this.root.innerHTML = "";
+      this.root.append(this.buildText("Edit items on:"));
+      this.root.append(this.buildCharacterSelect((C3) => {
+        this.target = C3;
+        this.selectedGroup = "";
+        this.render();
+      }, this.target));
       const worn = this.wornRestraints();
       if (worn.length === 0) {
-        this.root.append(this.buildText("You aren't wearing any restraints to edit."));
+        this.root.append(this.buildText(
+          this.target.IsPlayer() ? "You aren't wearing any restraints to edit." : "They aren't wearing any restraints to edit."
+        ));
         return;
       }
       if (!worn.some((i6) => i6.Asset.Group.Name === this.selectedGroup)) {
@@ -27994,7 +28051,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
           this.render();
         }
       }));
-      const item = InventoryGet(Player, this.selectedGroup);
+      const item = InventoryGet(this.target, this.selectedGroup);
       if (!item) {
         this.root.append(this.buildText("Could not read that item."));
         return;
@@ -28019,7 +28076,8 @@ One of mods you are using is using an old version of SDK. It will work for now b
       this.root.append(nameInput, descInput);
       const saveBtn = this.buildButton("Save name / description / effect");
       saveBtn.addEventListener("click", () => {
-        const fresh = InventoryGet(Player, this.selectedGroup);
+        const target = this.target;
+        const fresh = InventoryGet(target, this.selectedGroup);
         if (!fresh) {
           return re.error({ message: "Item no longer worn", duration: 3e3 });
         }
@@ -28041,8 +28099,13 @@ One of mods you are using is using an old version of SDK. It will work for now b
           return re.error({ message: "That effect isn't valid for this item", duration: 3e3 });
         }
         try {
-          InventoryCraft(Player, Player, this.selectedGroup, craft, true, false, false);
-          ChatRoomCharacterUpdate(Player);
+          const heldLock = beginInlineUnlock(fresh);
+          InventoryCraft(Player, target, this.selectedGroup, craft, true, false, false);
+          if (heldLock) {
+            const after = InventoryGet(target, this.selectedGroup);
+            if (after && !after.Property?.LockedBy) applyLockLocal(after, heldLock);
+          }
+          ChatRoomCharacterUpdate(target);
           re.success({ message: "Item updated", duration: 3e3 });
           this.render();
         } catch {
@@ -28053,13 +28116,15 @@ One of mods you are using is using an old version of SDK. It will work for now b
       if (item.Asset.Extended) {
         const fullBtn = this.buildButton("Open type / mode menu");
         fullBtn.addEventListener("click", () => {
-          const it2 = InventoryGet(Player, this.selectedGroup);
+          const target = this.target;
+          const it2 = InventoryGet(target, this.selectedGroup);
           if (!it2) {
             return re.error({ message: "Item no longer worn", duration: 3e3 });
           }
           try {
+            beginMenuUnlock(target, it2);
             hideQAMPanel();
-            CharacterSetCurrent(Player);
+            CharacterSetCurrent(target);
             DialogFocusItem = it2;
             DialogFocusSourceItem = null;
             DialogExtendItem(it2);
@@ -33382,7 +33447,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
     "Hidden"
   ];
   var temp = null;
-  function captureLock(item) {
+  function captureLock2(item) {
     if (!item?.Property?.LockedBy) return null;
     const snap = {};
     const prop = item.Property;
@@ -33405,7 +33470,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
     const group = item?.Asset?.Group?.Name;
     if (!item || !C3 || !group || !item.Property?.LockedBy) return;
     if (temp && temp.item === item) return;
-    const lock = captureLock(item);
+    const lock = captureLock2(item);
     if (!lock) return;
     temp = { C: C3, group, item, lock };
     delete item.Property.LockedBy;
