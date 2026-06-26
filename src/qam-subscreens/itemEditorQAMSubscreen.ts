@@ -167,7 +167,13 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
                     // screen; the lock is restored automatically when the menu closes.
                     beginMenuUnlock(target, it);
                     hideQAMPanel();
+                    // Set up the dialog exactly as if you'd navigated to this character and
+                    // item slot yourself, otherwise the extended screen renders with visual
+                    // glitches. CharacterSetCurrent = "on the character",
+                    // DialogChangeFocusToGroup = "on the item slot".
                     CharacterSetCurrent(target);
+                    DialogChangeFocusToGroup(target, it.Asset.Group.Name);
+                    DialogInventoryBuild(target);
                     DialogFocusItem = it;
                     DialogFocusSourceItem = null;
                     DialogExtendItem(it);
