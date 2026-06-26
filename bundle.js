@@ -28125,6 +28125,8 @@ One of mods you are using is using an old version of SDK. It will work for now b
             beginMenuUnlock(target, it2);
             hideQAMPanel();
             CharacterSetCurrent(target);
+            DialogChangeFocusToGroup(target, it2.Asset.Group.Name);
+            DialogInventoryBuild(target);
             DialogFocusItem = it2;
             DialogFocusSourceItem = null;
             DialogExtendItem(it2);
