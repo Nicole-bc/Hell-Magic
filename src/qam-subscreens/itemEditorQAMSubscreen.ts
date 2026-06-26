@@ -1,5 +1,6 @@
 import { getNickname } from "zois-core";
 import { toastsManager } from "zois-core/popups";
+import { applyLockLocal, beginInlineUnlock, beginMenuUnlock } from "@/modules/itemEditorLockBypass";
 import { BaseQAMSubscreen } from "./baseQAMSubscreen";
 
 
@@ -34,24 +35,36 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
     public description: string = "Edit a worn restraint's name, description and crafted effect";
 
     private root: HTMLDivElement;
+    private target: Character = Player;
     private selectedGroup: string = "";
 
     public load(container: HTMLDivElement) {
         super.load(container);
         this.root = container;
+        this.target = Player;
         this.render();
     }
 
     private wornRestraints(): Item[] {
-        return (Player.Appearance ?? []).filter((i) => i.Asset?.Group?.Category === "Item");
+        return (this.target.Appearance ?? []).filter((i) => i.Asset?.Group?.Category === "Item");
     }
 
     private render(): void {
         this.root.innerHTML = "";
 
+        // Whose items to edit (self, or anyone in the room).
+        this.root.append(this.buildText("Edit items on:"));
+        this.root.append(this.buildCharacterSelect((C) => {
+            this.target = C;
+            this.selectedGroup = "";
+            this.render();
+        }, this.target));
+
         const worn = this.wornRestraints();
         if (worn.length === 0) {
-            this.root.append(this.buildText("You aren't wearing any restraints to edit."));
+            this.root.append(this.buildText(
+                this.target.IsPlayer() ? "You aren't wearing any restraints to edit." : "They aren't wearing any restraints to edit."
+            ));
             return;
         }
 
@@ -67,7 +80,7 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
             onChange: (v) => { this.selectedGroup = v; this.render(); }
         }));
 
-        const item = InventoryGet(Player, this.selectedGroup);
+        const item = InventoryGet(this.target, this.selectedGroup);
         if (!item) {
             this.root.append(this.buildText("Could not read that item."));
             return;
@@ -95,7 +108,8 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
 
         const saveBtn = this.buildButton("Save name / description / effect");
         saveBtn.addEventListener("click", () => {
-            const fresh = InventoryGet(Player, this.selectedGroup);
+            const target = this.target;
+            const fresh = InventoryGet(target, this.selectedGroup);
             if (!fresh) {
                 return toastsManager.error({ message: "Item no longer worn", duration: 3000 });
             }
@@ -119,9 +133,16 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
             }
 
             try {
+                // If the item is locked, drop the lock locally just long enough to apply
+                // the craft, then put it straight back so it stays locked.
+                const heldLock = beginInlineUnlock(fresh);
                 // PreConfigureItem = false keeps the item's current extended type intact.
-                InventoryCraft(Player, Player, this.selectedGroup as AssetGroupItemName, craft, true, false, false);
-                ChatRoomCharacterUpdate(Player);
+                InventoryCraft(Player, target, this.selectedGroup as AssetGroupItemName, craft, true, false, false);
+                if (heldLock) {
+                    const after = InventoryGet(target, this.selectedGroup);
+                    if (after && !after.Property?.LockedBy) applyLockLocal(after, heldLock);
+                }
+                ChatRoomCharacterUpdate(target);
                 toastsManager.success({ message: "Item updated", duration: 3000 });
                 this.render();
             } catch {
@@ -136,13 +157,17 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
         if (item.Asset.Extended) {
             const fullBtn = this.buildButton("Open type / mode menu");
             fullBtn.addEventListener("click", () => {
-                const it = InventoryGet(Player, this.selectedGroup);
+                const target = this.target;
+                const it = InventoryGet(target, this.selectedGroup);
                 if (!it) {
                     return toastsManager.error({ message: "Item no longer worn", duration: 3000 });
                 }
                 try {
+                    // Unlock locally so BC opens the config screen instead of the unlock
+                    // screen; the lock is restored automatically when the menu closes.
+                    beginMenuUnlock(target, it);
                     hideQAMPanel();
-                    CharacterSetCurrent(Player);
+                    CharacterSetCurrent(target);
                     DialogFocusItem = it;
                     DialogFocusSourceItem = null;
                     DialogExtendItem(it);
