@@ -28129,106 +28129,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
   };
 
-  // src/qam-subscreens/clearLocksQAMSubscreen.ts
-  var LOCK_KEYS2 = [
-    "LockedBy",
-    "LockMemberNumber",
-    "LockMemberName",
-    "Password",
-    "CombinationNumber",
-    "LockPickSeed",
-    "RemoveTimer",
-    "MaxTimer",
-    "ShowTimer",
-    "RemoveItem",
-    "MemberNumberListKeys",
-    "Hidden"
-  ];
-  function clearDeviousRecords(groupNames) {
-    try {
-      const raw = Player.ExtensionSettings?.DOGS;
-      if (typeof raw !== "string") return;
-      const data = JSON.parse(LZString.decompressFromBase64(raw));
-      const groups = data?.deviousPadlock?.itemGroups;
-      if (!groups) return;
-      let changed = false;
-      for (const g5 of groupNames) {
-        if (groups[g5]) {
-          delete groups[g5];
-          changed = true;
-        }
-      }
-      if (changed) {
-        Player.ExtensionSettings.DOGS = LZString.compressToBase64(JSON.stringify(data));
-        if (typeof ServerPlayerExtensionSettingsSync === "function") {
-          ServerPlayerExtensionSettingsSync("DOGS");
-        }
-      }
-    } catch {
-    }
-  }
-  function clearAllLocks(C3) {
-    let count = 0;
-    const clearedGroups = [];
-    for (const item of C3.Appearance ?? []) {
-      const prop = item.Property;
-      if (prop?.LockedBy) {
-        for (const k6 of LOCK_KEYS2) delete prop[k6];
-        if (Array.isArray(prop.Effect)) {
-          prop.Effect = prop.Effect.filter((e2) => e2 !== "Lock");
-        }
-        if (prop.Name === "DeviousPadlock") delete prop.Name;
-        clearedGroups.push(item.Asset.Group.Name);
-        count++;
-      }
-    }
-    if (count > 0) {
-      if (C3.IsPlayer()) clearDeviousRecords(clearedGroups);
-      CharacterRefresh(C3, true, false);
-      ChatRoomCharacterUpdate(C3);
-    }
-    return count;
-  }
-  var ClearLocksQAMSubscreen = class extends BaseQAMSubscreen {
-    name = "Clear All Locks";
-    description = "Strip every lock, including DOGS devious padlocks";
-    root;
-    target = Player;
-    load(container) {
-      super.load(container);
-      this.root = container;
-      this.target = Player;
-      this.render();
-    }
-    render() {
-      this.root.innerHTML = "";
-      this.root.append(this.buildText("Clear locks on:"));
-      this.root.append(this.buildCharacterSelect((C3) => {
-        this.target = C3;
-        this.render();
-      }, this.target));
-      const lockedCount = (this.target.Appearance ?? []).filter((i6) => i6.Property?.LockedBy).length;
-      this.root.append(this.buildText(
-        lockedCount === 0 ? "No locked items found." : `${lockedCount} locked item(s) found.`
-      ));
-      const clearBtn = this.buildButton("Clear all locks");
-      clearBtn.addEventListener("click", () => {
-        try {
-          const n4 = clearAllLocks(this.target);
-          if (n4 > 0) {
-            re.success({ message: `Cleared ${n4} lock(s)`, duration: 3e3 });
-          } else {
-            re.error({ message: "No locks to clear", duration: 3e3 });
-          }
-          this.render();
-        } catch {
-          re.error({ message: "Could not clear locks", duration: 3e3 });
-        }
-      });
-      this.root.append(clearBtn);
-    }
-  };
-
   // src/qam-subscreens/exportAppearanceQAMSubscreen.ts
   var ExportAppearanceQAMSubscreen = class extends BaseQAMSubscreen {
     name = "Export Appearance";
@@ -31025,12 +30925,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
       id: 1018,
       subscreen: new ItemEditorQAMSubscreen(),
       icon: Hammer,
-      isBeta: true
-    },
-    {
-      id: 1019,
-      subscreen: new ClearLocksQAMSubscreen(),
-      icon: LockOpen,
       isBeta: true
     }
   ];
