@@ -4,39 +4,15 @@ import { BaseQAMSubscreen } from "./baseQAMSubscreen";
 
 // Every Property field that can carry lock state/secret data.
 const LOCK_KEYS = [
-    "LockedBy", "LockMemberNumber", "LockMemberName", "Password", "CombinationNumber",
+    "LockedBy", "LockMemberNumber", "Password", "CombinationNumber",
     "LockPickSeed", "RemoveTimer", "MaxTimer", "ShowTimer", "RemoveItem",
     "MemberNumberListKeys", "Hidden"
 ];
-
-// DOGS records each devious lock in Player.ExtensionSettings.DOGS and re-applies it the
-// instant it sees the item unlocked. Delete those records (for the given groups) so it
-// has nothing to restore from. Self only — we can't touch another player's storage.
-function clearDeviousRecords(groupNames: string[]): void {
-    try {
-        const raw = (Player.ExtensionSettings as Record<string, any>)?.DOGS;
-        if (typeof raw !== "string") return;
-        const data = JSON.parse(LZString.decompressFromBase64(raw));
-        const groups = data?.deviousPadlock?.itemGroups;
-        if (!groups) return;
-        let changed = false;
-        for (const g of groupNames) {
-            if (groups[g]) { delete groups[g]; changed = true; }
-        }
-        if (changed) {
-            (Player.ExtensionSettings as Record<string, any>).DOGS = LZString.compressToBase64(JSON.stringify(data));
-            if (typeof ServerPlayerExtensionSettingsSync === "function") {
-                ServerPlayerExtensionSettingsSync("DOGS" as keyof ExtensionSettings);
-            }
-        }
-    } catch { /* DOGS not present or unreadable */ }
-}
 
 // Strip locks by rewriting the item Property directly (NOT via the unlock action that
 // DOGS hooks to block removal), then sync. Works on standard and devious padlocks alike.
 function clearAllLocks(C: Character): number {
     let count = 0;
-    const clearedGroups: string[] = [];
     for (const item of (C.Appearance ?? [])) {
         const prop = item.Property as Record<string, any> | undefined;
         if (prop?.LockedBy) {
@@ -44,15 +20,10 @@ function clearAllLocks(C: Character): number {
             if (Array.isArray(prop.Effect)) {
                 prop.Effect = prop.Effect.filter((e) => e !== "Lock");
             }
-            // Drop DOGS's "DeviousPadlock" marker so it doesn't recognise the item.
-            if (prop.Name === "DeviousPadlock") delete prop.Name;
-            clearedGroups.push(item.Asset.Group.Name);
             count++;
         }
     }
     if (count > 0) {
-        // Remove DOGS's stored records first (self only), then sync the stripped item.
-        if (C.IsPlayer()) clearDeviousRecords(clearedGroups);
         CharacterRefresh(C, true, false);
         ChatRoomCharacterUpdate(C);
     }
