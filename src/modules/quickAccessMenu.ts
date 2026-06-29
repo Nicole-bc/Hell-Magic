@@ -13,6 +13,7 @@ import { LockKeeperQAMSubscreen } from "@/qam-subscreens/lockKeeperQAMSubscreen"
 import { ChatTriggersQAMSubscreen } from "@/qam-subscreens/chatTriggersQAMSubscreen";
 import { OutfitsQAMSubscreen } from "@/qam-subscreens/outfitsQAMSubscreen";
 import { ItemEditorQAMSubscreen } from "@/qam-subscreens/itemEditorQAMSubscreen";
+import { ClearLocksQAMSubscreen } from "@/qam-subscreens/clearLocksQAMSubscreen";
 import { ExportAppearanceQAMSubscreen } from "@/qam-subscreens/exportAppearanceQAMSubscreen";
 import { LeaveRoomQAMSubscreen } from "@/qam-subscreens/leaveRoomQAMSubscreen";
 import { TotalReleaseQAMSubscreen } from "@/qam-subscreens/totalReleaseQAMSubscreen";
@@ -434,6 +435,12 @@ export const qamFeatures: QAMFeature[] = [
         id: 1018,
         subscreen: new ItemEditorQAMSubscreen(),
         icon: Hammer,
+        isBeta: true
+    },
+    {
+        id: 1019,
+        subscreen: new ClearLocksQAMSubscreen(),
+        icon: Unlock,
         isBeta: true
     }
 ];
