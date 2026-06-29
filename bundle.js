@@ -27678,6 +27678,59 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
   };
 
+  // src/qam-subscreens/importAppearanceQAMSubscreen.ts
+  var ImportAppearanceQAMSubscreen = class extends BaseQAMSubscreen {
+    name = "Import Appearance";
+    description = "Import appearance on target using base64 outfit code";
+    load(container) {
+      super.load(container);
+      let target = Player;
+      const input = this.buildInput("Code");
+      const select = this.buildCharacterSelect((C3) => {
+        target = C3;
+      });
+      const btn = this.buildButton("Import Appearance");
+      btn.addEventListener("click", () => {
+        if (!ServerChatRoomGetAllowItem(Player, target)) {
+          return re.error({ message: "Interactions are not allowed", duration: 3e3 });
+        }
+        try {
+          h2(
+            target,
+            v3(target.AssetFamily, JSON.parse(LZString.decompressFromBase64(input.value)))
+          );
+          re.success({
+            message: `Appearance was successfully imported on ${k3(target)}`,
+            duration: 4e3
+          });
+        } catch {
+          re.error({
+            title: "Oops!",
+            message: "Error occurred while trying to import appearance",
+            duration: 5e3
+          });
+        }
+      });
+      container.append(input, select, btn);
+    }
+  };
+
+  // src/qam-subscreens/lockKeeperQAMSubscreen.ts
+  var LockKeeperQAMSubscreen = class extends BaseQAMSubscreen {
+    name = "Lock Keeper";
+    description = "Keep a lock when switching the restraint under it";
+    load(container) {
+      super.load(container);
+      const keepLockCheckbox = this.buildCheckbox("Keep lock when switching restraint", modStorage.cheats?.keepLockOnSwap, (isChecked) => {
+        modStorage.cheats ??= {};
+        modStorage.cheats.keepLockOnSwap = isChecked;
+        syncStorage();
+      });
+      const hint = this.buildText("While on, a locked item can be opened and swapped, and the lock (code, owner and timer) is carried onto whatever you put there.");
+      container.append(keepLockCheckbox, hint);
+    }
+  };
+
   // src/modules/outfitStorage.ts
   var STORAGE_KEY = "HellMagicOutfits";
   function getSavedOutfits() {
@@ -27717,91 +27770,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
       v3(Player.AssetFamily, JSON.parse(LZString.decompressFromBase64(code)))
     );
   }
-
-  // src/qam-subscreens/importAppearanceQAMSubscreen.ts
-  var ImportAppearanceQAMSubscreen = class extends BaseQAMSubscreen {
-    name = "Import Appearance";
-    description = "Import appearance on target using base64 outfit code";
-    load(container) {
-      super.load(container);
-      let target = Player;
-      let selectedOutfit = "";
-      const savedOutfits = getSavedOutfits();
-      const input = this.buildDropdown({
-        currentOption: "",
-        options: [
-          {
-            name: "",
-            text: savedOutfits.length ? "\u2014 No outfit \u2014" : "\u2014 No saved outfits \u2014"
-          },
-          ...savedOutfits.map((o4) => ({ name: o4.name, text: o4.name }))
-        ],
-        onChange: (v6) => {
-          selectedOutfit = v6;
-        }
-      });
-      const select = this.buildCharacterSelect((C3) => {
-        target = C3;
-      });
-      const reaction = this.buildInput("Reaction");
-      const btn = this.buildButton("Import Appearance");
-      btn.addEventListener("click", () => {
-        if (!ServerChatRoomGetAllowItem(Player, target)) {
-          return re.error({
-            message: "Interactions are not allowed",
-            duration: 3e3
-          });
-        }
-        try {
-          const outfit = savedOutfits.find((o4) => o4.name === selectedOutfit);
-          if (!outfit) {
-            return re.error({
-              message: "Please select a valid outfit",
-              duration: 3e3
-            });
-          }
-          h2(
-            target,
-            v3(
-              target.AssetFamily,
-              JSON.parse(LZString.decompressFromBase64(outfit.code))
-            )
-          );
-          const reactionText = reaction.value.trim();
-          if (reactionText) {
-            g.sendAction(reactionText);
-          }
-          re.success({
-            message: `Appearance was successfully imported on ${k3(target)}`,
-            duration: 4e3
-          });
-        } catch {
-          re.error({
-            title: "Oops!",
-            message: "Error occurred while trying to import appearance",
-            duration: 5e3
-          });
-        }
-      });
-      container.append(input, select, reaction, btn);
-    }
-  };
-
-  // src/qam-subscreens/lockKeeperQAMSubscreen.ts
-  var LockKeeperQAMSubscreen = class extends BaseQAMSubscreen {
-    name = "Lock Keeper";
-    description = "Keep a lock when switching the restraint under it";
-    load(container) {
-      super.load(container);
-      const keepLockCheckbox = this.buildCheckbox("Keep lock when switching restraint", modStorage.cheats?.keepLockOnSwap, (isChecked) => {
-        modStorage.cheats ??= {};
-        modStorage.cheats.keepLockOnSwap = isChecked;
-        syncStorage();
-      });
-      const hint = this.buildText("While on, a locked item can be opened and swapped, and the lock (code, owner and timer) is carried onto whatever you put there.");
-      container.append(keepLockCheckbox, hint);
-    }
-  };
 
   // src/qam-subscreens/chatTriggersQAMSubscreen.ts
   var ChatTriggersQAMSubscreen = class extends BaseQAMSubscreen {
@@ -27985,6 +27953,28 @@ One of mods you are using is using an old version of SDK. It will work for now b
     stripLockLocal(item);
     CharacterRefresh(target, false, false);
   }
+  function relockPending() {
+    if (!pending) return;
+    const { target, group, lock } = pending;
+    pending = null;
+    const item = InventoryGet(target, group);
+    if (item && !item.Property?.LockedBy) {
+      applyLockLocal(item, lock);
+      CharacterRefresh(target, true, false);
+      ChatRoomCharacterUpdate(target);
+    }
+  }
+  function loadItemEditorLockBypass() {
+    for (const fn of ["DialogLeaveItemMenu", "DialogLeaveFocusItem", "DialogLeave", "DialogMenuBack"]) {
+      if (typeof globalThis[fn] === "function") {
+        l3(fn, f3.OBSERVE, (args, next) => {
+          const ret = next(args);
+          if (pending) setTimeout(relockPending, 60);
+          return ret;
+        });
+      }
+    }
+  }
 
   // src/qam-subscreens/itemEditorQAMSubscreen.ts
   function allowedEffects(asset) {
@@ -28136,6 +28126,78 @@ One of mods you are using is using an old version of SDK. It will work for now b
         });
         this.root.append(fullBtn);
       }
+    }
+  };
+
+  // src/qam-subscreens/clearLocksQAMSubscreen.ts
+  var LOCK_KEYS2 = [
+    "LockedBy",
+    "LockMemberNumber",
+    "Password",
+    "CombinationNumber",
+    "LockPickSeed",
+    "RemoveTimer",
+    "MaxTimer",
+    "ShowTimer",
+    "RemoveItem",
+    "MemberNumberListKeys",
+    "Hidden"
+  ];
+  function clearAllLocks(C3) {
+    let count = 0;
+    for (const item of C3.Appearance ?? []) {
+      const prop = item.Property;
+      if (prop?.LockedBy) {
+        for (const k6 of LOCK_KEYS2) delete prop[k6];
+        if (Array.isArray(prop.Effect)) {
+          prop.Effect = prop.Effect.filter((e2) => e2 !== "Lock");
+        }
+        count++;
+      }
+    }
+    if (count > 0) {
+      CharacterRefresh(C3, true, false);
+      ChatRoomCharacterUpdate(C3);
+    }
+    return count;
+  }
+  var ClearLocksQAMSubscreen = class extends BaseQAMSubscreen {
+    name = "Clear All Locks";
+    description = "Strip every lock, including DOGS devious padlocks";
+    root;
+    target = Player;
+    load(container) {
+      super.load(container);
+      this.root = container;
+      this.target = Player;
+      this.render();
+    }
+    render() {
+      this.root.innerHTML = "";
+      this.root.append(this.buildText("Clear locks on:"));
+      this.root.append(this.buildCharacterSelect((C3) => {
+        this.target = C3;
+        this.render();
+      }, this.target));
+      const lockedCount = (this.target.Appearance ?? []).filter((i6) => i6.Property?.LockedBy).length;
+      this.root.append(this.buildText(
+        lockedCount === 0 ? "No locked items found." : `${lockedCount} locked item(s) found.`
+      ));
+      const clearBtn = this.buildButton("Clear all locks");
+      clearBtn.addEventListener("click", () => {
+        try {
+          const n4 = clearAllLocks(this.target);
+          if (n4 > 0) {
+            re.success({ message: `Cleared ${n4} lock(s)`, duration: 3e3 });
+          } else {
+            re.error({ message: "No locks to clear", duration: 3e3 });
+          }
+          this.render();
+        } catch {
+          re.error({ message: "Could not clear locks", duration: 3e3 });
+        }
+      });
+      this.root.append(clearBtn);
     }
   };
 
@@ -30935,6 +30997,12 @@ One of mods you are using is using an old version of SDK. It will work for now b
       id: 1018,
       subscreen: new ItemEditorQAMSubscreen(),
       icon: Hammer,
+      isBeta: true
+    },
+    {
+      id: 1019,
+      subscreen: new ClearLocksQAMSubscreen(),
+      icon: LockOpen,
       isBeta: true
     }
   ];
@@ -35055,6 +35123,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
     loadAuraBreaker();
     loadLockKeeper();
     loadChatTriggers();
+    loadItemEditorLockBypass();
     loadOverlay();
     loadDarkMagic();
     addActivities();
