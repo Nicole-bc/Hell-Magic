@@ -27770,12 +27770,24 @@ One of mods you are using is using an old version of SDK. It will work for now b
       v3(Player.AssetFamily, JSON.parse(LZString.decompressFromBase64(code)))
     );
   }
+  function isValidOutfitCode(code) {
+    try {
+      const decompressed = LZString.decompressFromBase64(code.trim());
+      if (!decompressed) return false;
+      const parsed = JSON.parse(decompressed);
+      return Array.isArray(parsed);
+    } catch {
+      return false;
+    }
+  }
 
   // src/qam-subscreens/chatTriggersQAMSubscreen.ts
   var ChatTriggersQAMSubscreen = class extends BaseQAMSubscreen {
     name = "Chat Triggers";
     description = "Type an emote to swap your outfit and send a response emote";
     root;
+    // Index of the trigger currently being edited, or null when adding a new one.
+    editingIndex = null;
     load(container) {
       super.load(container);
       this.root = container;
@@ -27783,8 +27795,12 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
     render() {
       this.root.innerHTML = "";
-      this.root.append(this.buildText("Your triggers:"));
       const triggers = modStorage.chatTriggers ?? [];
+      const editing = this.editingIndex !== null && this.editingIndex < triggers.length ? triggers[this.editingIndex] : null;
+      if (this.editingIndex !== null && !editing) {
+        this.editingIndex = null;
+      }
+      this.root.append(this.buildText("Your triggers:"));
       if (triggers.length === 0) {
         this.root.append(this.buildText("None yet \u2014 add one below."));
       }
@@ -27792,25 +27808,38 @@ One of mods you are using is using an old version of SDK. It will work for now b
         const row = document.createElement("div");
         row.style.cssText = "display: flex; align-items: center; justify-content: space-between; column-gap: 0.5em; margin: 0.25em 1em;";
         const label = document.createElement("p");
-        label.style.cssText = "color: #e7d2c6; font-size: 1.1em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
-        label.textContent = (t3.phrase || "(no phrase)") + (t3.outfit ? `  \xB7  ${t3.outfit}` : "");
+        label.style.cssText = "color: #e7d2c6; font-size: 1.1em; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+        label.textContent = (t3.phrase || "(no phrase)") + (t3.outfit ? `  \xB7  ${t3.outfit}` : t3.code ? "  \xB7  (code)" : "");
+        const editBtn = this.buildButton(this.editingIndex === i6 ? "Editing\u2026" : "Edit");
+        editBtn.style.margin = "0";
+        editBtn.style.flexShrink = "0";
+        editBtn.addEventListener("click", () => {
+          this.editingIndex = i6;
+          this.render();
+        });
         const removeBtn = this.buildButton("Remove");
         removeBtn.style.margin = "0";
         removeBtn.style.flexShrink = "0";
         removeBtn.addEventListener("click", () => {
           modStorage.chatTriggers?.splice(i6, 1);
+          if (this.editingIndex === i6) {
+            this.editingIndex = null;
+          } else if (this.editingIndex !== null && i6 < this.editingIndex) {
+            this.editingIndex -= 1;
+          }
           syncStorage();
           this.render();
         });
-        row.append(label, removeBtn);
+        row.append(label, editBtn, removeBtn);
         this.root.append(row);
       });
-      this.root.append(this.buildText("Add a trigger:"));
+      this.root.append(this.buildText(editing ? "Edit trigger:" : "Add a trigger:"));
       const phraseInput = this.buildInput("Trigger emote, e.g. *snaps her fingers*");
-      let selectedOutfit = "";
+      if (editing) phraseInput.value = editing.phrase ?? "";
+      let selectedOutfit = editing?.outfit ?? "";
       const savedOutfits = getSavedOutfits();
       const outfitDropdown = this.buildDropdown({
-        currentOption: "",
+        currentOption: selectedOutfit,
         options: [
           { name: "", text: savedOutfits.length ? "\u2014 No outfit \u2014" : "\u2014 No saved outfits \u2014" },
           ...savedOutfits.map((o4) => ({ name: o4.name, text: o4.name }))
@@ -27820,22 +27849,40 @@ One of mods you are using is using an old version of SDK. It will work for now b
         }
       });
       const responseInput = this.buildInput("Response emote line");
-      const addBtn = this.buildButton("Add trigger");
-      addBtn.addEventListener("click", () => {
+      if (editing) responseInput.value = editing.response ?? "";
+      const submitBtn = this.buildButton(editing ? "Update trigger" : "Add trigger");
+      submitBtn.addEventListener("click", () => {
         const phrase = phraseInput.value.trim();
         if (!phrase) {
           return re.error({ message: "Set a trigger phrase", duration: 3e3 });
         }
         modStorage.chatTriggers ??= [];
-        modStorage.chatTriggers.push({
+        const keepCode = !selectedOutfit && editing?.code ? editing.code : void 0;
+        const newTrigger = {
           phrase,
           response: responseInput.value.trim(),
-          outfit: selectedOutfit || void 0
-        });
+          outfit: selectedOutfit || void 0,
+          code: keepCode
+        };
+        if (editing && this.editingIndex !== null) {
+          modStorage.chatTriggers[this.editingIndex] = newTrigger;
+          this.editingIndex = null;
+          re.success({ message: "Trigger updated", duration: 2e3 });
+        } else {
+          modStorage.chatTriggers.push(newTrigger);
+        }
         syncStorage();
         this.render();
       });
-      this.root.append(phraseInput, outfitDropdown, responseInput, addBtn);
+      this.root.append(phraseInput, outfitDropdown, responseInput, submitBtn);
+      if (editing) {
+        const cancelBtn = this.buildButton("Cancel edit");
+        cancelBtn.addEventListener("click", () => {
+          this.editingIndex = null;
+          this.render();
+        });
+        this.root.append(cancelBtn);
+      }
     }
   };
 
@@ -27904,6 +27951,31 @@ One of mods you are using is using an old version of SDK. It will work for now b
         }
       });
       this.root.append(nameInput, saveBtn);
+      this.root.append(this.buildText("Save from a code (Base64):"));
+      const codeNameInput = this.buildInput("Outfit name");
+      const codeInput = this.buildInput("Paste a Base64 outfit code");
+      const saveCodeBtn = this.buildButton("Save from code");
+      saveCodeBtn.addEventListener("click", () => {
+        const name = codeNameInput.value.trim();
+        const code = codeInput.value.trim();
+        if (!name) {
+          return re.error({ message: "Enter a name", duration: 3e3 });
+        }
+        if (!code) {
+          return re.error({ message: "Paste an outfit code", duration: 3e3 });
+        }
+        if (!isValidOutfitCode(code)) {
+          return re.error({ message: "Not a valid Base64 outfit code", duration: 3e3 });
+        }
+        const ok = saveOutfit(name, code);
+        if (ok) {
+          re.success({ message: `Saved "${name}"`, duration: 3e3 });
+          this.render();
+        } else {
+          re.error({ message: "Could not save (browser storage full?)", duration: 3e3 });
+        }
+      });
+      this.root.append(codeNameInput, codeInput, saveCodeBtn);
     }
   };
 
@@ -28192,6 +28264,28 @@ One of mods you are using is using an old version of SDK. It will work for now b
         }
       });
       container.append(formatSelect, select, btn);
+      const nameInput = this.buildInput("Outfit name");
+      const saveBtn = this.buildButton("Save to Outfits library");
+      saveBtn.addEventListener("click", () => {
+        if (isBannedBy(target)) return re.error({
+          title: "Denied",
+          message: "You are blacklisted or ghosted by this player",
+          duration: 4500
+        });
+        const name = nameInput.value.trim();
+        if (!name) {
+          return re.error({ message: "Enter a name", duration: 3e3 });
+        }
+        const code = LZString.compressToBase64(JSON.stringify(ServerAppearanceBundle(target.Appearance)));
+        const ok = saveOutfit(name, code);
+        if (ok) {
+          re.success({ message: `Saved "${name}" to your Outfits library`, duration: 3e3 });
+          nameInput.value = "";
+        } else {
+          re.error({ message: "Could not save (browser storage full?)", duration: 3e3 });
+        }
+      });
+      container.append(nameInput, saveBtn);
     }
   };
 
