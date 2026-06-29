@@ -51,3 +51,17 @@ export function applyOutfit(code: string): void {
         serverAppearanceBundleToAppearance(Player.AssetFamily, JSON.parse(LZString.decompressFromBase64(code)))
     );
 }
+
+// Validate that a string is a base64 outfit code we can later decompress + parse.
+// The library only stores/decodes the base64 (LZString.compressToBase64) format,
+// so this rejects UTF-16 / BTOA exports as well as plain garbage.
+export function isValidOutfitCode(code: string): boolean {
+    try {
+        const decompressed = LZString.decompressFromBase64(code.trim());
+        if (!decompressed) return false;
+        const parsed = JSON.parse(decompressed);
+        return Array.isArray(parsed);
+    } catch {
+        return false;
+    }
+}

@@ -1,6 +1,7 @@
 import { isBannedBy } from "@/modules/quickAccessMenu";
 import { BaseQAMSubscreen } from "./baseQAMSubscreen";
 import { toastsManager } from "zois-core/popups";
+import { saveOutfit } from "@/modules/outfitStorage";
 
 
 export class ExportAppearanceQAMSubscreen extends BaseQAMSubscreen {
@@ -63,5 +64,30 @@ export class ExportAppearanceQAMSubscreen extends BaseQAMSubscreen {
             }
         });
         container.append(formatSelect, select, btn);
+
+        const nameInput = this.buildInput("Outfit name");
+        const saveBtn = this.buildButton("Save to Outfits library");
+        saveBtn.addEventListener("click", () => {
+            if (isBannedBy(target)) return toastsManager.error({
+                title: "Denied",
+                message: "You are blacklisted or ghosted by this player",
+                duration: 4500
+            });
+            const name = nameInput.value.trim();
+            if (!name) {
+                return toastsManager.error({ message: "Enter a name", duration: 3000 });
+            }
+            // The library only consumes the Base64 (LZString) format, so always store
+            // that here regardless of which clipboard format is selected above.
+            const code = LZString.compressToBase64(JSON.stringify(ServerAppearanceBundle(target.Appearance)));
+            const ok = saveOutfit(name, code);
+            if (ok) {
+                toastsManager.success({ message: `Saved "${name}" to your Outfits library`, duration: 3000 });
+                nameInput.value = "";
+            } else {
+                toastsManager.error({ message: "Could not save (browser storage full?)", duration: 3000 });
+            }
+        });
+        container.append(nameInput, saveBtn);
     }
 }

@@ -1,6 +1,6 @@
 import { toastsManager } from "zois-core/popups";
 import { BaseQAMSubscreen } from "./baseQAMSubscreen";
-import { applyOutfit, captureCurrentOutfitCode, deleteOutfit, getSavedOutfits, saveOutfit } from "@/modules/outfitStorage";
+import { applyOutfit, captureCurrentOutfitCode, deleteOutfit, getSavedOutfits, isValidOutfitCode, saveOutfit } from "@/modules/outfitStorage";
 
 
 export class OutfitsQAMSubscreen extends BaseQAMSubscreen {
@@ -77,5 +77,31 @@ export class OutfitsQAMSubscreen extends BaseQAMSubscreen {
             }
         });
         this.root.append(nameInput, saveBtn);
+
+        this.root.append(this.buildText("Save from a code (Base64):"));
+        const codeNameInput = this.buildInput("Outfit name");
+        const codeInput = this.buildInput("Paste a Base64 outfit code");
+        const saveCodeBtn = this.buildButton("Save from code");
+        saveCodeBtn.addEventListener("click", () => {
+            const name = codeNameInput.value.trim();
+            const code = codeInput.value.trim();
+            if (!name) {
+                return toastsManager.error({ message: "Enter a name", duration: 3000 });
+            }
+            if (!code) {
+                return toastsManager.error({ message: "Paste an outfit code", duration: 3000 });
+            }
+            if (!isValidOutfitCode(code)) {
+                return toastsManager.error({ message: "Not a valid Base64 outfit code", duration: 3000 });
+            }
+            const ok = saveOutfit(name, code);
+            if (ok) {
+                toastsManager.success({ message: `Saved "${name}"`, duration: 3000 });
+                this.render();
+            } else {
+                toastsManager.error({ message: "Could not save (browser storage full?)", duration: 3000 });
+            }
+        });
+        this.root.append(codeNameInput, codeInput, saveCodeBtn);
     }
 }
