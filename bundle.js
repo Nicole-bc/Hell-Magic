@@ -28133,6 +28133,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
   var LOCK_KEYS2 = [
     "LockedBy",
     "LockMemberNumber",
+    "LockMemberName",
     "Password",
     "CombinationNumber",
     "LockPickSeed",
@@ -28143,8 +28144,32 @@ One of mods you are using is using an old version of SDK. It will work for now b
     "MemberNumberListKeys",
     "Hidden"
   ];
+  function clearDeviousRecords(groupNames) {
+    try {
+      const raw = Player.ExtensionSettings?.DOGS;
+      if (typeof raw !== "string") return;
+      const data = JSON.parse(LZString.decompressFromBase64(raw));
+      const groups = data?.deviousPadlock?.itemGroups;
+      if (!groups) return;
+      let changed = false;
+      for (const g5 of groupNames) {
+        if (groups[g5]) {
+          delete groups[g5];
+          changed = true;
+        }
+      }
+      if (changed) {
+        Player.ExtensionSettings.DOGS = LZString.compressToBase64(JSON.stringify(data));
+        if (typeof ServerPlayerExtensionSettingsSync === "function") {
+          ServerPlayerExtensionSettingsSync("DOGS");
+        }
+      }
+    } catch {
+    }
+  }
   function clearAllLocks(C3) {
     let count = 0;
+    const clearedGroups = [];
     for (const item of C3.Appearance ?? []) {
       const prop = item.Property;
       if (prop?.LockedBy) {
@@ -28152,10 +28177,13 @@ One of mods you are using is using an old version of SDK. It will work for now b
         if (Array.isArray(prop.Effect)) {
           prop.Effect = prop.Effect.filter((e2) => e2 !== "Lock");
         }
+        if (prop.Name === "DeviousPadlock") delete prop.Name;
+        clearedGroups.push(item.Asset.Group.Name);
         count++;
       }
     }
     if (count > 0) {
+      if (C3.IsPlayer()) clearDeviousRecords(clearedGroups);
       CharacterRefresh(C3, true, false);
       ChatRoomCharacterUpdate(C3);
     }
