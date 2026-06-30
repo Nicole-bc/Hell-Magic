@@ -25,6 +25,7 @@ import { PutLocksQAMSubscreen } from "@/qam-subscreens/putLocksQAMSubscreen";
 import { RemoveLocksQAMSubscreen } from "@/qam-subscreens/removeLocksQAMSubscreen";
 import { AVQS_QAMSubscreen } from "@/qam-subscreens/avcsQAMSubscreen";
 import { AuraOfChaosQAMSubscreen } from "@/qam-subscreens/auraOfChaosQAMSubscreen";
+import { ScriptSaverQAMSubscreen } from "@/qam-subscreens/scriptSaverQAMSubscreen";
 
 export let serverPing: number;
 let currentSubscreen: BaseQAMSubscreen;
@@ -434,6 +435,12 @@ export const qamFeatures: QAMFeature[] = [
         id: 1018,
         subscreen: new ItemEditorQAMSubscreen(),
         icon: Hammer,
+        isBeta: true
+    },
+    {
+        id: 1019,
+        subscreen: new ScriptSaverQAMSubscreen(),
+        icon: ScrollText,
         isBeta: true
     }
 ];
