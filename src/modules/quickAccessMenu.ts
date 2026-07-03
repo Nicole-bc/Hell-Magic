@@ -13,6 +13,7 @@ import { LockKeeperQAMSubscreen } from "@/qam-subscreens/lockKeeperQAMSubscreen"
 import { ChatTriggersQAMSubscreen } from "@/qam-subscreens/chatTriggersQAMSubscreen";
 import { OutfitsQAMSubscreen } from "@/qam-subscreens/outfitsQAMSubscreen";
 import { ItemEditorQAMSubscreen } from "@/qam-subscreens/itemEditorQAMSubscreen";
+import { WardrobeQAMSubscreen } from "@/qam-subscreens/wardrobeQAMSubscreen";
 import { ExportAppearanceQAMSubscreen } from "@/qam-subscreens/exportAppearanceQAMSubscreen";
 import { LeaveRoomQAMSubscreen } from "@/qam-subscreens/leaveRoomQAMSubscreen";
 import { TotalReleaseQAMSubscreen } from "@/qam-subscreens/totalReleaseQAMSubscreen";
@@ -25,7 +26,6 @@ import { PutLocksQAMSubscreen } from "@/qam-subscreens/putLocksQAMSubscreen";
 import { RemoveLocksQAMSubscreen } from "@/qam-subscreens/removeLocksQAMSubscreen";
 import { AVQS_QAMSubscreen } from "@/qam-subscreens/avcsQAMSubscreen";
 import { AuraOfChaosQAMSubscreen } from "@/qam-subscreens/auraOfChaosQAMSubscreen";
-import { ScriptSaverQAMSubscreen } from "@/qam-subscreens/scriptSaverQAMSubscreen";
 
 export let serverPing: number;
 let currentSubscreen: BaseQAMSubscreen;
@@ -439,8 +439,8 @@ export const qamFeatures: QAMFeature[] = [
     },
     {
         id: 1019,
-        subscreen: new ScriptSaverQAMSubscreen(),
-        icon: ScrollText,
+        subscreen: new WardrobeQAMSubscreen(),
+        icon: Shirt,
         isBeta: true
     }
 ];
