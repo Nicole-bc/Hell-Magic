@@ -28201,6 +28201,36 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
   };
 
+  // src/qam-subscreens/wardrobeQAMSubscreen.ts
+  function hideQAMPanel2() {
+    const panel = document.querySelector(".bccQAM");
+    if (panel) panel.style.display = "none";
+  }
+  var WardrobeQAMSubscreen = class extends BaseQAMSubscreen {
+    name = "Wardrobe";
+    description = "Open your character's appearance / wardrobe screen";
+    root;
+    load(container) {
+      super.load(container);
+      this.root = container;
+      this.render();
+    }
+    render() {
+      this.root.innerHTML = "";
+      this.root.append(this.buildText("Opens BC's own appearance screen, where you can change your outfit and save/load wardrobe slots."));
+      const btn = this.buildButton("Open wardrobe");
+      btn.addEventListener("click", () => {
+        try {
+          hideQAMPanel2();
+          CharacterAppearanceLoadCharacter(Player);
+        } catch {
+          re.error({ message: "Couldn't open the wardrobe (try inside a chatroom)", duration: 4e3 });
+        }
+      });
+      this.root.append(btn);
+    }
+  };
+
   // src/qam-subscreens/exportAppearanceQAMSubscreen.ts
   var ExportAppearanceQAMSubscreen = class extends BaseQAMSubscreen {
     name = "Export Appearance";
@@ -31019,6 +31049,12 @@ One of mods you are using is using an old version of SDK. It will work for now b
       id: 1018,
       subscreen: new ItemEditorQAMSubscreen(),
       icon: Hammer,
+      isBeta: true
+    },
+    {
+      id: 1019,
+      subscreen: new WardrobeQAMSubscreen(),
+      icon: Shirt,
       isBeta: true
     }
   ];
