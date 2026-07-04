@@ -28048,6 +28048,47 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
   }
 
+  // src/modules/itemStudio.ts
+  var mannequin = null;
+  function cleanupStudio() {
+    if (mannequin) {
+      try {
+        if (typeof CharacterDelete === "function") CharacterDelete(mannequin);
+      } catch {
+      }
+      mannequin = null;
+    }
+  }
+  function openItemStudio(outfitName) {
+    cleanupStudio();
+    mannequin = CharacterLoadSimple("HellMagicStudio");
+    try {
+      mannequin.Appearance = v3(
+        mannequin.AssetFamily,
+        ServerAppearanceBundle(Player.Appearance)
+      );
+      CharacterRefresh(mannequin, false, false);
+    } catch {
+    }
+    CharacterAppearanceLoadCharacter(mannequin, (accept) => {
+      try {
+        if (accept && mannequin) {
+          const code = LZString.compressToBase64(
+            JSON.stringify(ServerAppearanceBundle(mannequin.Appearance))
+          );
+          const name = outfitName?.trim() || `Studio ${(/* @__PURE__ */ new Date()).toLocaleDateString()}`;
+          if (saveOutfit(name, code)) {
+            re.success({ message: `Saved "${name}" to Outfits`, duration: 4e3 });
+          } else {
+            re.error({ message: "Couldn't save the studio outfit", duration: 4e3 });
+          }
+        }
+      } finally {
+        cleanupStudio();
+      }
+    });
+  }
+
   // src/qam-subscreens/itemEditorQAMSubscreen.ts
   function allowedEffects(asset) {
     const result = [];
@@ -28099,6 +28140,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
         this.root.append(this.buildText(
           this.target.IsPlayer() ? "You aren't wearing any restraints to edit." : "They aren't wearing any restraints to edit."
         ));
+        this.renderStudio();
         return;
       }
       if (!worn.some((i6) => i6.Asset.Group.Name === this.selectedGroup)) {
@@ -28198,6 +28240,25 @@ One of mods you are using is using an old version of SDK. It will work for now b
         });
         this.root.append(fullBtn);
       }
+      this.renderStudio();
+    }
+    // Studio (mannequin): build/configure an outfit on a private fake character with no
+    // visual glitches and no real target, then save the result to your Outfits library.
+    // Always your own look — independent of the target picker above.
+    renderStudio() {
+      this.root.append(this.buildText("\u2014 Studio (mannequin) \u2014"));
+      this.root.append(this.buildText("Build an outfit safely on a private stand-in seeded with your current look; on accept it saves to your Outfits."));
+      const studioName = this.buildInput("Studio outfit name (optional)");
+      const studioBtn = this.buildButton("Open Studio");
+      studioBtn.addEventListener("click", () => {
+        try {
+          hideQAMPanel();
+          openItemStudio(studioName.value);
+        } catch {
+          re.error({ message: "Couldn't open the studio (try inside a chatroom)", duration: 4e3 });
+        }
+      });
+      this.root.append(studioName, studioBtn);
     }
   };
 
