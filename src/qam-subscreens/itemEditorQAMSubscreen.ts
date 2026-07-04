@@ -1,7 +1,6 @@
 import { getNickname } from "zois-core";
 import { toastsManager } from "zois-core/popups";
 import { applyLockLocal, beginInlineUnlock, beginMenuUnlock } from "@/modules/itemEditorLockBypass";
-import { openItemStudio } from "@/modules/itemStudio";
 import { BaseQAMSubscreen } from "./baseQAMSubscreen";
 
 
@@ -66,7 +65,6 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
             this.root.append(this.buildText(
                 this.target.IsPlayer() ? "You aren't wearing any restraints to edit." : "They aren't wearing any restraints to edit."
             ));
-            this.renderStudio();
             return;
         }
 
@@ -185,27 +183,5 @@ export class ItemEditorQAMSubscreen extends BaseQAMSubscreen {
             });
             this.root.append(fullBtn);
         }
-
-        this.renderStudio();
-    }
-
-    // Studio (mannequin): build/configure an outfit on a private fake character with no
-    // visual glitches and no real target, then save the result to your Outfits library.
-    // Always your own look — independent of the target picker above.
-    private renderStudio(): void {
-        this.root.append(this.buildText("\u2014 Studio (mannequin) \u2014"));
-        this.root.append(this.buildText("Build an outfit safely on a private stand-in seeded with your current look; on accept it saves to your Outfits."));
-
-        const studioName = this.buildInput("Studio outfit name (optional)");
-        const studioBtn = this.buildButton("Open Studio");
-        studioBtn.addEventListener("click", () => {
-            try {
-                hideQAMPanel();
-                openItemStudio(studioName.value);
-            } catch {
-                toastsManager.error({ message: "Couldn't open the studio (try inside a chatroom)", duration: 4000 });
-            }
-        });
-        this.root.append(studioName, studioBtn);
     }
 }

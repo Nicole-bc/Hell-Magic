@@ -20,6 +20,10 @@ function cleanupStudio(): void {
 export function openItemStudio(outfitName: string): void {
     cleanupStudio();
 
+    // Hide the QAM panel so BC's appearance screen is visible (button self-heals).
+    const panel = document.querySelector<HTMLDivElement>(".bccQAM");
+    if (panel) panel.style.display = "none";
+
     mannequin = CharacterLoadSimple("HellMagicStudio");
     // Seed with your full current appearance (body + clothes + items) so you build from
     // your own look rather than a blank slate.
