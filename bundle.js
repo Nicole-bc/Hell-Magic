@@ -24802,6 +24802,20 @@ One of mods you are using is using an old version of SDK. It will work for now b
     ["path", { d: "M16 21h3a2 2 0 0 0 2-2v-3" }]
   ];
 
+  // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/palette.js
+  var Palette = [
+    [
+      "path",
+      {
+        d: "M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"
+      }
+    ],
+    ["circle", { cx: "13.5", cy: "6.5", r: ".5", fill: "currentColor" }],
+    ["circle", { cx: "17.5", cy: "10.5", r: ".5", fill: "currentColor" }],
+    ["circle", { cx: "6.5", cy: "12.5", r: ".5", fill: "currentColor" }],
+    ["circle", { cx: "8.5", cy: "7.5", r: ".5", fill: "currentColor" }]
+  ];
+
   // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/panel-left-close.js
   var PanelLeftClose = [
     ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2" }],
@@ -28048,47 +28062,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
   }
 
-  // src/modules/itemStudio.ts
-  var mannequin = null;
-  function cleanupStudio() {
-    if (mannequin) {
-      try {
-        if (typeof CharacterDelete === "function") CharacterDelete(mannequin);
-      } catch {
-      }
-      mannequin = null;
-    }
-  }
-  function openItemStudio(outfitName) {
-    cleanupStudio();
-    mannequin = CharacterLoadSimple("HellMagicStudio");
-    try {
-      mannequin.Appearance = v3(
-        mannequin.AssetFamily,
-        ServerAppearanceBundle(Player.Appearance)
-      );
-      CharacterRefresh(mannequin, false, false);
-    } catch {
-    }
-    CharacterAppearanceLoadCharacter(mannequin, (accept) => {
-      try {
-        if (accept && mannequin) {
-          const code = LZString.compressToBase64(
-            JSON.stringify(ServerAppearanceBundle(mannequin.Appearance))
-          );
-          const name = outfitName?.trim() || `Studio ${(/* @__PURE__ */ new Date()).toLocaleDateString()}`;
-          if (saveOutfit(name, code)) {
-            re.success({ message: `Saved "${name}" to Outfits`, duration: 4e3 });
-          } else {
-            re.error({ message: "Couldn't save the studio outfit", duration: 4e3 });
-          }
-        }
-      } finally {
-        cleanupStudio();
-      }
-    });
-  }
-
   // src/qam-subscreens/itemEditorQAMSubscreen.ts
   function allowedEffects(asset) {
     const result = [];
@@ -28140,7 +28113,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
         this.root.append(this.buildText(
           this.target.IsPlayer() ? "You aren't wearing any restraints to edit." : "They aren't wearing any restraints to edit."
         ));
-        this.renderStudio();
         return;
       }
       if (!worn.some((i6) => i6.Asset.Group.Name === this.selectedGroup)) {
@@ -28240,25 +28212,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
         });
         this.root.append(fullBtn);
       }
-      this.renderStudio();
-    }
-    // Studio (mannequin): build/configure an outfit on a private fake character with no
-    // visual glitches and no real target, then save the result to your Outfits library.
-    // Always your own look — independent of the target picker above.
-    renderStudio() {
-      this.root.append(this.buildText("\u2014 Studio (mannequin) \u2014"));
-      this.root.append(this.buildText("Build an outfit safely on a private stand-in seeded with your current look; on accept it saves to your Outfits."));
-      const studioName = this.buildInput("Studio outfit name (optional)");
-      const studioBtn = this.buildButton("Open Studio");
-      studioBtn.addEventListener("click", () => {
-        try {
-          hideQAMPanel();
-          openItemStudio(studioName.value);
-        } catch {
-          re.error({ message: "Couldn't open the studio (try inside a chatroom)", duration: 4e3 });
-        }
-      });
-      this.root.append(studioName, studioBtn);
     }
   };
 
@@ -28289,6 +28242,75 @@ One of mods you are using is using an old version of SDK. It will work for now b
         }
       });
       this.root.append(btn);
+    }
+  };
+
+  // src/modules/itemStudio.ts
+  var mannequin = null;
+  function cleanupStudio() {
+    if (mannequin) {
+      try {
+        if (typeof CharacterDelete === "function") CharacterDelete(mannequin);
+      } catch {
+      }
+      mannequin = null;
+    }
+  }
+  function openItemStudio(outfitName) {
+    cleanupStudio();
+    const panel = document.querySelector(".bccQAM");
+    if (panel) panel.style.display = "none";
+    mannequin = CharacterLoadSimple("HellMagicStudio");
+    try {
+      mannequin.Appearance = v3(
+        mannequin.AssetFamily,
+        ServerAppearanceBundle(Player.Appearance)
+      );
+      CharacterRefresh(mannequin, false, false);
+    } catch {
+    }
+    CharacterAppearanceLoadCharacter(mannequin, (accept) => {
+      try {
+        if (accept && mannequin) {
+          const code = LZString.compressToBase64(
+            JSON.stringify(ServerAppearanceBundle(mannequin.Appearance))
+          );
+          const name = outfitName?.trim() || `Studio ${(/* @__PURE__ */ new Date()).toLocaleDateString()}`;
+          if (saveOutfit(name, code)) {
+            re.success({ message: `Saved "${name}" to Outfits`, duration: 4e3 });
+          } else {
+            re.error({ message: "Couldn't save the studio outfit", duration: 4e3 });
+          }
+        }
+      } finally {
+        cleanupStudio();
+      }
+    });
+  }
+
+  // src/qam-subscreens/itemStudioQAMSubscreen.ts
+  var ItemStudioQAMSubscreen = class extends BaseQAMSubscreen {
+    name = "Item Studio";
+    description = "Build an outfit on a private mannequin, then save it to your Outfits";
+    root;
+    load(container) {
+      super.load(container);
+      this.root = container;
+      this.render();
+    }
+    render() {
+      this.root.innerHTML = "";
+      this.root.append(this.buildText("Opens BC's own appearance/extended editor on a private stand-in seeded with your current look \u2014 add, configure and colour anything with no real target and no visual glitches. On accept it saves to your Outfits."));
+      const nameInput = this.buildInput("Studio outfit name (optional)");
+      const openBtn = this.buildButton("Open Studio");
+      openBtn.addEventListener("click", () => {
+        try {
+          openItemStudio(nameInput.value);
+        } catch {
+          re.error({ message: "Couldn't open the studio (try inside a chatroom)", duration: 4e3 });
+        }
+      });
+      this.root.append(nameInput, openBtn);
     }
   };
 
@@ -31116,6 +31138,12 @@ One of mods you are using is using an old version of SDK. It will work for now b
       id: 1019,
       subscreen: new WardrobeQAMSubscreen(),
       icon: Shirt,
+      isBeta: true
+    },
+    {
+      id: 1020,
+      subscreen: new ItemStudioQAMSubscreen(),
+      icon: Palette,
       isBeta: true
     }
   ];
@@ -35379,6 +35407,7 @@ lucide/dist/esm/icons/lock.js:
 lucide/dist/esm/icons/log-out.js:
 lucide/dist/esm/icons/map-pinned.js:
 lucide/dist/esm/icons/maximize.js:
+lucide/dist/esm/icons/palette.js:
 lucide/dist/esm/icons/panel-left-close.js:
 lucide/dist/esm/icons/panels-top-left.js:
 lucide/dist/esm/icons/pencil.js:
