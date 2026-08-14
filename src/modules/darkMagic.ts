@@ -42,6 +42,7 @@ import { messagesManager } from "zois-core/messaging";
 import { getNickname } from "zois-core";
 import { hookFunction, HookPriority, patchFunction } from "zois-core/modsApi";
 import { CastSpellMessageDto } from "@/dto/castSpellMessageDto";
+import { isWarded } from "./foxfireWard";
 import { TraditioArtiumEffect } from "@/spell-effects/traditioArtiumEffect";
 import { FlammaSubmissionisEffect } from "@/spell-effects/flammaSubmissionisEffect";
 import { AcceleratioVoluptatisEffect } from "@/spell-effects/acceleratioVoluptatisEffect";
@@ -342,6 +343,12 @@ export function allowSpellCast(
 
 export function shouldSpellBounceBack(spell: ModStorage["darkMagic"]["spells"][0] | unknown, castedBy: Character, target: Character): boolean {
     if (castedBy.MemberNumber === target.MemberNumber) return false;
+    // HARDCODED anti-retribution: a spell WE cast never bounces back onto us,
+    // whatever the target's aura says. This branch is evaluated on our own client
+    // in castSpell(), so it is fully reliable. Note the reverse case is untouched:
+    // when someone else casts at us (castedBy is not us) our own aura still bounces
+    // their spell back at them exactly as before.
+    if (castedBy.IsPlayer()) return false;
     const casterSettings = castedBy.IsPlayer() ? modStorage : castedBy.BCC;
     const targetSettings = target.IsPlayer() ? modStorage : target.BCC;
     // @ts-expect-error
@@ -443,6 +450,14 @@ export function processSpell(castedBy: Character, spell: ModStorage["darkMagic"]
 }
 
 export function castSpell(target: Character, spell: ModStorage["darkMagic"]["spells"][0]) {
+    // Foxfire Ward: the spell is never sent. Handled before the cast is announced,
+    // so the room does not see a cast that was never going to land.
+    if (isWarded(target.MemberNumber)) {
+        messagesManager.sendAction(
+            `${getNickname(Player)}'s "${spell.name}" gutters out in a wash of foxfire before it reaches ${getNickname(target)}`
+        );
+        return;
+    }
     messagesManager.sendAction(`${getNickname(Player)} casts "${spell.name}" spell on ${getNickname(target)}`);
     if (target.IsPlayer()) {
         processSpell(target, spell);

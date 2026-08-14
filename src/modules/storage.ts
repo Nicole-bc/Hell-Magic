@@ -46,10 +46,9 @@ export interface ModStorage {
         }
         triggersCount?: number
         ignoreItemsChangeIfNotRestraint?: boolean
-        // Standalone anti-retribution shield. Works even when the aura is disabled:
-        // when you act on someone whose aura is up, retaliation aimed back at you is
-        // undone for a few seconds.
-        ignoreEnemyAura?: boolean
+        // NOTE: `ignoreEnemyAura` was removed as a setting. Anti-retribution is now
+        // hardcoded always-on in modules/auraBreaker.ts. Old saved values are simply
+        // ignored; the key is left undeclared so nothing reads it by accident.
         // Stamp outgoing changes with the target's own member number as the source,
         // so their aura treats them as self-applied. Only works if the server passes
         // the source field through instead of overwriting it — test in a live room.
