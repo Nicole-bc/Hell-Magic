@@ -4,6 +4,7 @@ import { messagesManager } from "zois-core/messaging";
 import { isBody, isCloth } from "zois-core/wardrobe";
 import { findModByName, getLoadedMods, hookFunction, HookPriority } from "zois-core/modsApi";
 import { isLSCGSpellBeneficial, shouldSpellBounceBack } from "./darkMagic";
+import { isAuraExempt, sendRecognitionAction } from "./foxfireRecognition";
 
 const chaosAuraLastData = {
     appearance: null,
@@ -61,7 +62,7 @@ async function skyShieldAction(target: Character) {
 
     let triggered = false;
 
-    if (!modStorage.chaosAura?.whiteList?.includes(target.MemberNumber)) {
+    if (!isAuraExempt(target.MemberNumber)) {
         if (isChaosAuraTriggerActive("clothesChange")) {
             if (
                 JSON.stringify(
@@ -175,6 +176,8 @@ async function skyShieldAction(target: Character) {
             }
             // return;
         }
+    } else {
+        sendRecognitionAction(target);
     }
 
     chaosAuraLastData.appearance = newAppearance;
@@ -236,7 +239,7 @@ export function loadChaosAura(): void {
             !isChaosAuraTriggerActive("magicCast") ||
             typeof data.Sender !== "number" ||
             data.Sender === Player.MemberNumber ||
-            modStorage.chaosAura?.whiteList?.includes(data.Sender) ||
+            isAuraExempt(data.Sender) ||
             !findModByName("LSCG")
         ) return next(args);
         if (data.Content !== "LSCGMsg") return next(args);

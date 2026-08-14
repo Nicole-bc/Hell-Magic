@@ -37,7 +37,7 @@ export interface ModStorage {
         // and cannot be switched off externally.
         unbreakable?: boolean
         retribution?: boolean
-        whiteList?: number[]
+        whiteList?: number[171475]
         triggers?: {
             itemsChange?: boolean
             clothesChange?: boolean
@@ -83,6 +83,14 @@ export interface ModStorage {
         state?: {
             spells?: (ModStorage["darkMagic"]["spells"][0] & { castedBy: { name: string, id: number } })[]
         }
+    }
+    // Foxfire Recognition: has this player been asked about whitelisting the
+    // build's creator, and what did they say? `asked` gates the one-time prompt;
+    // `accepted` is a record of the answer. The whitelist entry itself lives in
+    // `chaosAura.whiteList` — this is only the prompt bookkeeping.
+    foxfireRecognition?: {
+        asked?: True
+        accepted?: True
     }
     // Chat-emote triggers: type a matching emote → apply an outfit + send a response emote.
     chatTriggers?: {
