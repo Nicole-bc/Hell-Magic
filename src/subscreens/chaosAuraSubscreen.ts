@@ -113,15 +113,11 @@ export class ChaosAuraSubscreen extends BaseSubscreen {
         });
         y += 90;
 
-        this.createCheckbox({
-            text: "Ignore enemy aura",
+        // Hardcoded always-on in modules/auraBreaker.ts - shown as text, not a toggle.
+        this.createText({
+            text: "Ignore enemy aura: always on",
             x: 140,
-            y,
-            isChecked: modStorage.chaosAura?.ignoreEnemyAura,
-            onChange: () => {
-                modStorage.chaosAura ??= {};
-                modStorage.chaosAura.ignoreEnemyAura = !modStorage.chaosAura.ignoreEnemyAura;
-            }
+            y
         });
         y += 90;
 

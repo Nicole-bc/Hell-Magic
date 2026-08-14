@@ -21,9 +21,41 @@ in `LICENCE`.
 
 - Re-themed identity: **Foxfire Magic** page, **Foxfire Aura**, hellfire/foxfire
   flavor text, ember palette and flame icons.
-- **Unbreakable** aura mode — always on, all triggers, cannot be shattered.
-- **Ignore enemy aura** — shrug off a shielded target's retaliation against you.
-- **Shatter enemy aura** — best-effort break of a target's (non-unbreakable) aura.
+- **Unbreakable** aura mode — always on, all triggers, cannot be switched off
+  externally.
+- **Anti-retribution** — hardcoded always-on. When you act on someone whose aura
+  is up, retaliation aimed back at you is undone: returned restraints are
+  stripped, and a spell of yours that would bounce off their aura is dropped
+  instead of landing on you. Covers both Dark Magic and LSCG spells. People on
+  your own aura whitelist are exempt, so they can still act on you normally.
+  There is no setting for this any more — see `src/modules/auraBreaker.ts`.
+- **Foxfire Recognition** — an opt-in exemption, off by default. On first load
+  this build asks the player once whether their Foxfire Aura should recognize its
+  creator; accepting means the aura won't trigger against her — items, clothes,
+  pose and spells all pass — and declining is remembered and never asked again.
+  It lives in its own setting (`foxfireRecognition.enabled`) and its own QAM
+  screen (**Recognition**, feature id 1021), so it never touches the player's own
+  aura whitelist and can be switched off at any time, taking effect immediately.
+  Everyone other than the creator is unaffected.
+- **Foxfire Ward** — Hell Magic will not carry an action against the kitsune the
+  addon is themed on (member `171475`). Restraint changes, appearance pushes and
+  spells aimed at her are dropped client-side with an in-theme notice instead of
+  being sent. It is disabled on her own client. See `src/modules/foxfireWard.ts`;
+  set `ANNOUNCE_WARD = false` there for a silent drop, or change
+  `WARDED_MEMBER_NUMBER` if you are running your own build.
+
+  Two honest limits: it binds **only** clients running Hell Magic — vanilla
+  players, plain BCC and LSCG users are unaffected, since their client never runs
+  this code. And it is client-side, so anyone who forks this repo and deletes the
+  module is out from under it. Treat it as flavour. Real protection is Bondage
+  Club's own item permissions, whitelist and blacklist.
+
+### Not implemented
+
+**Shatter enemy aura** was listed here in earlier revisions. There is no
+implementation of it anywhere in `src/` — the only thing resembling it is gated
+behind a race check that almost never passes. Removed from the feature list until
+it does something.
 
 The internal mod id and storage key remain `BCC` on purpose, so this build can
 still read other players' synced state and interact with current-version

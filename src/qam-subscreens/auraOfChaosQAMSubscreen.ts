@@ -27,11 +27,8 @@ export class AuraOfChaosQAMSubscreen extends BaseQAMSubscreen {
             syncStorage();
         });
 
-        const ignoreEnemyCheckbox = this.buildCheckbox("Ignore enemy aura", modStorage.chaosAura?.ignoreEnemyAura, (isChecked) => {
-            modStorage.chaosAura ??= {};
-            modStorage.chaosAura.ignoreEnemyAura = isChecked;
-            syncStorage();
-        });
+        // Hardcoded always-on, so this is a status line rather than a checkbox.
+        const ignoreEnemyText = this.buildText("Ignore enemy aura: always on");
 
         const disguiseCheckbox = this.buildCheckbox("Disguise actions as self-applied", modStorage.chaosAura?.disguiseAsSelf, (isChecked) => {
             modStorage.chaosAura ??= {};
@@ -69,6 +66,6 @@ export class AuraOfChaosQAMSubscreen extends BaseQAMSubscreen {
             syncStorage();
         });
 
-        container.append(stateCheckbox, unbreakableCheckbox, retributionCheckbox, ignoreEnemyCheckbox, disguiseCheckbox, triggersText, clothesTriggerCheckbox, itemsTriggerCheckbox, poseTriggerCheckbox, magicTriggerCheckbox);
+        container.append(stateCheckbox, unbreakableCheckbox, retributionCheckbox, ignoreEnemyText, disguiseCheckbox, triggersText, clothesTriggerCheckbox, itemsTriggerCheckbox, poseTriggerCheckbox, magicTriggerCheckbox);
     }
 }

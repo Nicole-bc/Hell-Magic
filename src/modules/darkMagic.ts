@@ -43,6 +43,7 @@ import { getNickname } from "zois-core";
 import { hookFunction, HookPriority, patchFunction } from "zois-core/modsApi";
 import { CastSpellMessageDto } from "@/dto/castSpellMessageDto";
 import { isWarded } from "./foxfireWard";
+import { CREATOR_MEMBER_NUMBER, isAuraExempt } from "./foxfireRecognition";
 import { TraditioArtiumEffect } from "@/spell-effects/traditioArtiumEffect";
 import { FlammaSubmissionisEffect } from "@/spell-effects/flammaSubmissionisEffect";
 import { AcceleratioVoluptatisEffect } from "@/spell-effects/acceleratioVoluptatisEffect";
@@ -341,6 +342,15 @@ export function allowSpellCast(
     return { result: true };
 }
 
+/**
+ * Recognition check against a *synced* copy of someone else's storage. Note this
+ * cannot use `isAuraExempt`, which reads our own `modStorage` — here we need to
+ * know what the other player has enabled on their client.
+ */
+function recognizes(settings: ModStorage | undefined, memberNumber: number): boolean {
+    return !!settings?.foxfireRecognition?.enabled && memberNumber === CREATOR_MEMBER_NUMBER;
+}
+
 export function shouldSpellBounceBack(spell: ModStorage["darkMagic"]["spells"][0] | unknown, castedBy: Character, target: Character): boolean {
     if (castedBy.MemberNumber === target.MemberNumber) return false;
     // HARDCODED anti-retribution: a spell WE cast never bounces back onto us,
@@ -358,13 +368,15 @@ export function shouldSpellBounceBack(spell: ModStorage["darkMagic"]["spells"][0
         (
             (casterSettings?.chaosAura?.enabled || casterSettings?.chaosAura?.unbreakable) &&
             (casterSettings?.chaosAura?.unbreakable || casterSettings?.chaosAura?.triggers?.magicCast) &&
-            !casterSettings?.chaosAura?.whiteList?.includes(target.MemberNumber)
+            !casterSettings?.chaosAura?.whiteList?.includes(target.MemberNumber) &&
+            !recognizes(casterSettings, target.MemberNumber)
         ) ||
         (
             !(targetSettings?.chaosAura?.enabled || targetSettings?.chaosAura?.unbreakable) ||
             !targetSettings.chaosAura?.retribution ||
             !(targetSettings?.chaosAura?.unbreakable || targetSettings?.chaosAura?.triggers?.magicCast) ||
-            targetSettings?.chaosAura?.whiteList?.includes(castedBy.MemberNumber)
+            targetSettings?.chaosAura?.whiteList?.includes(castedBy.MemberNumber) ||
+            recognizes(targetSettings, castedBy.MemberNumber)
         )
     );
 }
@@ -410,7 +422,7 @@ export function processSpell(castedBy: Character, spell: ModStorage["darkMagic"]
     if (
         (modStorage.chaosAura?.enabled || modStorage.chaosAura?.unbreakable) &&
         (modStorage.chaosAura?.unbreakable || modStorage.chaosAura?.triggers?.magicCast) &&
-        !modStorage.chaosAura?.whiteList?.includes(castedBy.MemberNumber) &&
+        !isAuraExempt(castedBy.MemberNumber) &&
         spell.effects.split("").some((c) => getSpellEffect(c.charCodeAt(0))?.isBeneficial === false)
     ) {
         modStorage.chaosAura.triggersCount ??= 0;

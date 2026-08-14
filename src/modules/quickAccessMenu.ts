@@ -1,5 +1,5 @@
 import mouthWateringIcon from "@/assets/game-icons/mouthWatering.svg";
-import { Palette, ClipboardCopy, ClipboardPaste, CopyPlus, Eye, Flame, GitCompareArrows, Hammer, HatGlasses, type IconNode, Lock, LogOut, MapPinned, PersonStanding, Repeat, Shield, ShieldAlert, ShieldMinus, Shirt, Sparkles, Unlock, Wand } from "lucide";
+import { Palette, ClipboardCopy, Handshake, ClipboardPaste, CopyPlus, Eye, Flame, GitCompareArrows, Hammer, HatGlasses, type IconNode, Lock, LogOut, MapPinned, PersonStanding, Repeat, Shield, ShieldAlert, ShieldMinus, Shirt, Sparkles, Unlock, Wand } from "lucide";
 import { getPlayer } from "zois-core";
 import { appearanceComparer, serverAppearanceBundleToAppearance } from "zois-core/wardrobe";
 import { modStorage } from "./storage";
@@ -27,6 +27,7 @@ import { PutLocksQAMSubscreen } from "@/qam-subscreens/putLocksQAMSubscreen";
 import { RemoveLocksQAMSubscreen } from "@/qam-subscreens/removeLocksQAMSubscreen";
 import { AVQS_QAMSubscreen } from "@/qam-subscreens/avcsQAMSubscreen";
 import { AuraOfChaosQAMSubscreen } from "@/qam-subscreens/auraOfChaosQAMSubscreen";
+import { FoxfireRecognitionQAMSubscreen } from "@/qam-subscreens/foxfireRecognitionQAMSubscreen";
 
 export let serverPing: number;
 let currentSubscreen: BaseQAMSubscreen;
@@ -449,6 +450,11 @@ export const qamFeatures: QAMFeature[] = [
         subscreen: new ItemStudioQAMSubscreen(),
         icon: Palette,
         isBeta: true
+    },
+    {
+        id: 1021,
+        subscreen: new FoxfireRecognitionQAMSubscreen(),
+        icon: Handshake
     }
 ];
 

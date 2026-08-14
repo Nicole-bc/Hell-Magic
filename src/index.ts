@@ -9,6 +9,8 @@ import { loadCheats } from "./modules/cheats";
 import { loadStorage } from "./modules/storage";
 import { loadChaosAura } from "./modules/chaosAura";
 import { loadAuraBreaker } from "./modules/auraBreaker";
+import { loadFoxfireWard } from "./modules/foxfireWard";
+import { loadFoxfireRecognition } from "./modules/foxfireRecognition";
 import { loadLockKeeper } from "./modules/lockKeeper";
 import { loadChatTriggers } from "./modules/chatTriggers";
 import { loadItemEditorLockBypass } from "./modules/itemEditorLockBypass";
@@ -58,6 +60,7 @@ function start() {
 
     injectStyles(`${styles}@font-face { font-family: Kitnyx2; src: url(${kitnyx2Font}); }`);
     loadStorage();
+    loadFoxfireWard();
     loadSettingsSubscreen();
     loadCheats();
     loadQuickAccessMenu();
@@ -69,6 +72,7 @@ function start() {
     loadOverlay();
     loadDarkMagic();
     addActivities();
+    loadFoxfireRecognition();
 
     toastsManager.success({
         title: `${MOD_DATA.name} loaded`,
