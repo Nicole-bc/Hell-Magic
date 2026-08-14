@@ -24734,6 +24734,20 @@ One of mods you are using is using an old version of SDK. It will work for now b
     ["circle", { cx: "6", cy: "5", r: "3" }]
   ];
 
+  // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/handshake.js
+  var Handshake = [
+    ["path", { d: "m11 17 2 2a1 1 0 1 0 3-3" }],
+    [
+      "path",
+      {
+        d: "m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"
+      }
+    ],
+    ["path", { d: "m21 3 1 11h-2" }],
+    ["path", { d: "M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3" }],
+    ["path", { d: "M3 4h8" }]
+  ];
+
   // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/hat-glasses.js
   var HatGlasses = [
     ["path", { d: "M14 18a2 2 0 0 0-4 0" }],
@@ -29513,11 +29527,94 @@ One of mods you are using is using an old version of SDK. It will work for now b
 
   // src/modules/foxfireWard.ts
   var WARDED_MEMBER_NUMBER = 171475;
+  var ANNOUNCE_WARD = true;
   function wardActive() {
     return Player?.MemberNumber !== WARDED_MEMBER_NUMBER;
   }
   function isWarded(memberNumber) {
     return wardActive() && memberNumber === WARDED_MEMBER_NUMBER;
+  }
+  var lastNotice = 0;
+  function notice() {
+    if (!ANNOUNCE_WARD) return;
+    if (Date.now() - lastNotice < 4e3) return;
+    lastNotice = Date.now();
+    const warded = O3(WARDED_MEMBER_NUMBER);
+    const name = warded ? k3(warded) : "her";
+    g.sendLocal(
+      `Spectral foxfire coils between you and ${name}, and your hands find nothing but embers.`
+    );
+  }
+  function loadFoxfireWard() {
+    if (!wardActive()) return;
+    l3("ServerSend", f3.OVERRIDE_BEHAVIOR, (args, next) => {
+      const [type, data] = args;
+      if (type === "ChatRoomCharacterUpdate" && data?.ID != null) {
+        const target = ChatRoomCharacter.find((c6) => c6.OnlineID === data.ID);
+        if (isWarded(target?.MemberNumber)) {
+          notice();
+          return;
+        }
+      }
+      if (type === "ChatRoomCharacterItemUpdate" && isWarded(data?.Target)) {
+        notice();
+        return;
+      }
+      if (type === "ChatRoomChat" && data?.Content === "LSCGMsg") {
+        const message = data.Dictionary?.[0]?.message;
+        if (message?.command?.name === "spell" && isWarded(message?.target)) {
+          notice();
+          return;
+        }
+      }
+      return next(args);
+    });
+  }
+
+  // src/modules/foxfireRecognition.ts
+  var CREATOR_MEMBER_NUMBER = 171475;
+  var CREATOR_NAME = "Nicole";
+  function isOtherPlayer() {
+    return Player?.MemberNumber !== CREATOR_MEMBER_NUMBER;
+  }
+  function hasRecognition() {
+    return isOtherPlayer() && !!modStorage.foxfireRecognition?.enabled;
+  }
+  function isAuraExempt(memberNumber) {
+    if (memberNumber == null) return false;
+    if (modStorage.chaosAura?.whiteList?.includes(memberNumber)) return true;
+    return hasRecognition() && memberNumber === CREATOR_MEMBER_NUMBER;
+  }
+  function setRecognition(enabled) {
+    modStorage.foxfireRecognition ??= {};
+    modStorage.foxfireRecognition.enabled = enabled;
+    modStorage.foxfireRecognition.asked = true;
+    syncStorage();
+  }
+  var lastNarration = 0;
+  function sendRecognitionAction(actor) {
+    if (!hasRecognition()) return;
+    if (actor?.MemberNumber !== CREATOR_MEMBER_NUMBER) return;
+    if (Date.now() - lastNarration < 4e3) return;
+    lastNarration = Date.now();
+    g.sendAction(
+      `The foxfire that protects ${k3(Player)} recognizes its creator and parts for ${k3(actor)}`
+    );
+  }
+  async function loadFoxfireRecognition() {
+    if (!isOtherPlayer()) return;
+    if (modStorage.foxfireRecognition?.asked) return;
+    await y3(() => !!document.getElementById("TextAreaChatLog"));
+    const accepted = await ie.confirm({
+      message: `This build's foxfire is ${CREATOR_NAME}'s (${CREATOR_MEMBER_NUMBER}).
+
+Let your Foxfire Aura recognize her, so it won't trigger against her? Your aura keeps working normally against everyone else, and this does not touch your whitelist. You can change it any time in the QAM under Recognition.`
+    });
+    setRecognition(!!accepted);
+    re.info({
+      message: accepted ? `The foxfire will recognize ${CREATOR_NAME}` : `Your aura will treat ${CREATOR_NAME} like anyone else`,
+      duration: 5e3
+    });
   }
 
   // src/spell-effects/traditioArtiumEffect.ts
@@ -29835,6 +29932,9 @@ One of mods you are using is using an old version of SDK. It will work for now b
     }
     return { result: true };
   }
+  function recognizes(settings, memberNumber) {
+    return !!settings?.foxfireRecognition?.enabled && memberNumber === CREATOR_MEMBER_NUMBER;
+  }
   function shouldSpellBounceBack(spell, castedBy, target) {
     if (castedBy.MemberNumber === target.MemberNumber) return false;
     if (castedBy.IsPlayer()) return false;
@@ -29842,7 +29942,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
     const targetSettings = target.IsPlayer() ? modStorage : target.BCC;
     const _isSpellBeneficial = spell.Name ? isLSCGSpellBeneficial(spell) : isSpellBeneficial(spell);
     if (_isSpellBeneficial) return false;
-    return !((casterSettings?.chaosAura?.enabled || casterSettings?.chaosAura?.unbreakable) && (casterSettings?.chaosAura?.unbreakable || casterSettings?.chaosAura?.triggers?.magicCast) && !casterSettings?.chaosAura?.whiteList?.includes(target.MemberNumber) || (!(targetSettings?.chaosAura?.enabled || targetSettings?.chaosAura?.unbreakable) || !targetSettings.chaosAura?.retribution || !(targetSettings?.chaosAura?.unbreakable || targetSettings?.chaosAura?.triggers?.magicCast) || targetSettings?.chaosAura?.whiteList?.includes(castedBy.MemberNumber)));
+    return !((casterSettings?.chaosAura?.enabled || casterSettings?.chaosAura?.unbreakable) && (casterSettings?.chaosAura?.unbreakable || casterSettings?.chaosAura?.triggers?.magicCast) && !casterSettings?.chaosAura?.whiteList?.includes(target.MemberNumber) && !recognizes(casterSettings, target.MemberNumber) || (!(targetSettings?.chaosAura?.enabled || targetSettings?.chaosAura?.unbreakable) || !targetSettings.chaosAura?.retribution || !(targetSettings?.chaosAura?.unbreakable || targetSettings?.chaosAura?.triggers?.magicCast) || targetSettings?.chaosAura?.whiteList?.includes(castedBy.MemberNumber) || recognizes(targetSettings, castedBy.MemberNumber)));
   }
   function isSpellInstant(spell) {
     return spell.effects.split("").every((c6) => spellEffects[c6.charCodeAt(0)].isInstant);
@@ -29876,7 +29976,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
   }
   function processSpell(castedBy, spell) {
     spell = JSON.parse(JSON.stringify(spell));
-    if ((modStorage.chaosAura?.enabled || modStorage.chaosAura?.unbreakable) && (modStorage.chaosAura?.unbreakable || modStorage.chaosAura?.triggers?.magicCast) && !modStorage.chaosAura?.whiteList?.includes(castedBy.MemberNumber) && spell.effects.split("").some((c6) => getSpellEffect(c6.charCodeAt(0))?.isBeneficial === false)) {
+    if ((modStorage.chaosAura?.enabled || modStorage.chaosAura?.unbreakable) && (modStorage.chaosAura?.unbreakable || modStorage.chaosAura?.triggers?.magicCast) && !isAuraExempt(castedBy.MemberNumber) && spell.effects.split("").some((c6) => getSpellEffect(c6.charCodeAt(0))?.isBeneficial === false)) {
       modStorage.chaosAura.triggersCount ??= 0;
       modStorage.chaosAura.triggersCount++;
       g.sendAction(`A veil of hellfire consumed the "${spell.name}" spell before it reached ${CharacterNickname(Player)}`);
@@ -30737,11 +30837,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
         modStorage.chaosAura.retribution = isChecked;
         syncStorage();
       });
-      const ignoreEnemyCheckbox = this.buildCheckbox("Ignore enemy aura", modStorage.chaosAura?.ignoreEnemyAura, (isChecked) => {
-        modStorage.chaosAura ??= {};
-        modStorage.chaosAura.ignoreEnemyAura = isChecked;
-        syncStorage();
-      });
+      const ignoreEnemyText = this.buildText("Ignore enemy aura: always on");
       const disguiseCheckbox = this.buildCheckbox("Disguise actions as self-applied", modStorage.chaosAura?.disguiseAsSelf, (isChecked) => {
         modStorage.chaosAura ??= {};
         modStorage.chaosAura.disguiseAsSelf = isChecked;
@@ -30772,7 +30868,28 @@ One of mods you are using is using an old version of SDK. It will work for now b
         modStorage.chaosAura.triggers.magicCast = isChecked;
         syncStorage();
       });
-      container.append(stateCheckbox, unbreakableCheckbox, retributionCheckbox, ignoreEnemyCheckbox, disguiseCheckbox, triggersText, clothesTriggerCheckbox, itemsTriggerCheckbox, poseTriggerCheckbox, magicTriggerCheckbox);
+      container.append(stateCheckbox, unbreakableCheckbox, retributionCheckbox, ignoreEnemyText, disguiseCheckbox, triggersText, clothesTriggerCheckbox, itemsTriggerCheckbox, poseTriggerCheckbox, magicTriggerCheckbox);
+    }
+  };
+
+  // src/qam-subscreens/foxfireRecognitionQAMSubscreen.ts
+  var FoxfireRecognitionQAMSubscreen = class extends BaseQAMSubscreen {
+    name = "Recognition";
+    description = "Whether your aura recognizes this build's creator";
+    load(container) {
+      super.load(container);
+      const explanation = this.buildText(
+        `This build of Hell Magic was made by ${CREATOR_NAME} (${CREATOR_MEMBER_NUMBER}). With Recognition on, your Foxfire Aura won't trigger against her \u2014 she can change your items, clothes and pose, and her spells will land.`
+      );
+      const scope = this.buildText(
+        `Everyone else is unaffected: your aura, its triggers and your whitelist all keep working exactly as they do now. Off by default, and turning it off again takes effect immediately.`
+      );
+      const recognitionCheckbox = this.buildCheckbox(
+        `Recognize ${CREATOR_NAME}`,
+        hasRecognition(),
+        (isChecked) => setRecognition(isChecked)
+      );
+      container.append(explanation, scope, recognitionCheckbox);
     }
   };
 
@@ -31161,6 +31278,11 @@ One of mods you are using is using an old version of SDK. It will work for now b
       subscreen: new ItemStudioQAMSubscreen(),
       icon: Palette,
       isBeta: true
+    },
+    {
+      id: 1021,
+      subscreen: new FoxfireRecognitionQAMSubscreen(),
+      icon: Handshake
     }
   ];
   function createQAMButton() {
@@ -31325,30 +31447,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
       version: version2
     };
     syncStorage();
-  }
-
-  // src/modules/foxfireRecognition.ts
-  var CREATOR_MEMBER_NUMBER = 171475;
-  function isOtherPlayer() {
-    return Player?.MemberNumber !== CREATOR_MEMBER_NUMBER;
-  }
-  function hasRecognition() {
-    return isOtherPlayer() && !!modStorage.foxfireRecognition?.enabled;
-  }
-  function isAuraExempt(memberNumber) {
-    if (memberNumber == null) return false;
-    if (modStorage.chaosAura?.whiteList?.includes(memberNumber)) return true;
-    return hasRecognition() && memberNumber === CREATOR_MEMBER_NUMBER;
-  }
-  var lastNarration = 0;
-  function sendRecognitionAction(actor) {
-    if (!hasRecognition()) return;
-    if (actor?.MemberNumber !== CREATOR_MEMBER_NUMBER) return;
-    if (Date.now() - lastNarration < 4e3) return;
-    lastNarration = Date.now();
-    g.sendAction(
-      `The foxfire that protects ${k3(Player)} recognizes its creator and parts for ${k3(actor)}`
-    );
   }
 
   // src/modules/chaosAura.ts
@@ -31651,15 +31749,10 @@ One of mods you are using is using an old version of SDK. It will work for now b
         y: y6
       });
       y6 += 90;
-      this.createCheckbox({
-        text: "Ignore enemy aura",
+      this.createText({
+        text: "Ignore enemy aura: always on",
         x: 140,
-        y: y6,
-        isChecked: modStorage.chaosAura?.ignoreEnemyAura,
-        onChange: () => {
-          modStorage.chaosAura ??= {};
-          modStorage.chaosAura.ignoreEnemyAura = !modStorage.chaosAura.ignoreEnemyAura;
-        }
+        y: y6
       });
       y6 += 90;
       this.createCheckbox({
@@ -35317,6 +35410,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
     });
     P2(`${styles_default2}@font-face { font-family: Kitnyx2; src: url(${Kitnyx2_default}); }`);
     loadStorage();
+    loadFoxfireWard();
     loadSettingsSubscreen();
     loadCheats();
     loadQuickAccessMenu();
@@ -35328,6 +35422,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
     loadOverlay();
     loadDarkMagic();
     addActivities();
+    loadFoxfireRecognition();
     re.success({
       title: `${p.name} loaded`,
       message: `v${version2}`,
@@ -35460,6 +35555,7 @@ lucide/dist/esm/icons/git-pull-request-closed.js:
 lucide/dist/esm/icons/git-pull-request.js:
 lucide/dist/esm/icons/hammer.js:
 lucide/dist/esm/icons/hand-coins.js:
+lucide/dist/esm/icons/handshake.js:
 lucide/dist/esm/icons/hat-glasses.js:
 lucide/dist/esm/icons/heart.js:
 lucide/dist/esm/icons/lock-open.js:
