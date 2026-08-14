@@ -451,11 +451,7 @@ export const qamFeatures: QAMFeature[] = [
         icon: Palette,
         isBeta: true
     },
-    {
-        id: 1021,
-        subscreen: new FoxfireRecognitionQAMSubscreen(),
-        icon: Handshake
-    }
+    
 ];
 
 export function createQAMButton(): void {

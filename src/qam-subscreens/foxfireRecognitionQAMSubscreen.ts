@@ -5,7 +5,7 @@ import {
     setRecognition
 } from "@/modules/foxfireRecognition";
 import { BaseQAMSubscreen } from "./baseQAMSubscreen";
-
+/*
 
 export class FoxfireRecognitionQAMSubscreen extends BaseQAMSubscreen {
     public name: string = "Recognition";
@@ -35,3 +35,4 @@ export class FoxfireRecognitionQAMSubscreen extends BaseQAMSubscreen {
         container.append(explanation, scope, recognitionCheckbox);
     }
 }
+    */

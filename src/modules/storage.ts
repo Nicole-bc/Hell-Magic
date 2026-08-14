@@ -89,8 +89,8 @@ export interface ModStorage {
     // trust list and this module never touches it. `asked` gates the one-time
     // prompt so a decline is remembered.
     foxfireRecognition?: {
-        asked?: boolean
-        enabled?: boolean
+        asked?: true
+        enabled?: true
     }
     // Chat-emote triggers: type a matching emote → apply an outfit + send a response emote.
     chatTriggers?: {

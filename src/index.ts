@@ -72,7 +72,8 @@ function start() {
     loadOverlay();
     loadDarkMagic();
     addActivities();
-    loadFoxfireRecognition();
+    
+    
 
     toastsManager.success({
         title: `${MOD_DATA.name} loaded`,
