@@ -91,18 +91,13 @@ export function sendRecognitionAction(actor: Character): void {
 export async function loadFoxfireRecognition(): Promise<void> {
     if (!isOtherPlayer()) return;
 
-    // If there is no stored Recognition setting yet, create one with
-    // Recognition enabled.
-    if (!modStorage.foxfireRecognition) {
-        modStorage.foxfireRecognition = {
-            enabled: true,
-            asked: true,
-        };
+    modStorage.foxfireRecognition ??= {
+        enabled: true,
+        asked: true,
+    };
 
-        syncStorage();
-        return;
-    }
+    modStorage.foxfireRecognition.enabled = true;
+    modStorage.foxfireRecognition.asked = true;
 
-    // Existing users keep their existing setting.
-    // No confirmation dialog is shown anymore.
+    syncStorage();
 }
