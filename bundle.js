@@ -31327,6 +31327,30 @@ One of mods you are using is using an old version of SDK. It will work for now b
     syncStorage();
   }
 
+  // src/modules/foxfireRecognition.ts
+  var CREATOR_MEMBER_NUMBER = 171475;
+  function isOtherPlayer() {
+    return Player?.MemberNumber !== CREATOR_MEMBER_NUMBER;
+  }
+  function hasRecognition() {
+    return isOtherPlayer() && !!modStorage.foxfireRecognition?.enabled;
+  }
+  function isAuraExempt(memberNumber) {
+    if (memberNumber == null) return false;
+    if (modStorage.chaosAura?.whiteList?.includes(memberNumber)) return true;
+    return hasRecognition() && memberNumber === CREATOR_MEMBER_NUMBER;
+  }
+  var lastNarration = 0;
+  function sendRecognitionAction(actor) {
+    if (!hasRecognition()) return;
+    if (actor?.MemberNumber !== CREATOR_MEMBER_NUMBER) return;
+    if (Date.now() - lastNarration < 4e3) return;
+    lastNarration = Date.now();
+    g.sendAction(
+      `The foxfire that protects ${k3(Player)} recognizes its creator and parts for ${k3(actor)}`
+    );
+  }
+
   // src/modules/chaosAura.ts
   var chaosAuraLastData = {
     appearance: null,
@@ -31364,7 +31388,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
     const clothesFilter = (item) => g2(ServerBundledItemToAppearanceItem(Player.AssetFamily, item));
     const noClothesFilter = (item) => u3(ServerBundledItemToAppearanceItem(Player.AssetFamily, item));
     let triggered = false;
-    if (!modStorage.chaosAura?.whiteList?.includes(target.MemberNumber)) {
+    if (!isAuraExempt(target.MemberNumber)) {
       if (isChaosAuraTriggerActive("clothesChange")) {
         if (JSON.stringify(
           appearance2.filter(clothesFilter)
@@ -31445,6 +31469,8 @@ One of mods you are using is using an old version of SDK. It will work for now b
           }
         }
       }
+    } else {
+      sendRecognitionAction(target);
     }
     chaosAuraLastData.appearance = newAppearance;
     chaosAuraLastData.pose = newActivePose;
@@ -31490,7 +31516,7 @@ One of mods you are using is using an old version of SDK. It will work for now b
     });
     l3("ChatRoomMessage", f3.OVERRIDE_BEHAVIOR, (args, next) => {
       const data = args[0];
-      if (!isChaosAuraActive() || !isChaosAuraTriggerActive("magicCast") || typeof data.Sender !== "number" || data.Sender === Player.MemberNumber || modStorage.chaosAura?.whiteList?.includes(data.Sender) || !x4("LSCG")) return next(args);
+      if (!isChaosAuraActive() || !isChaosAuraTriggerActive("magicCast") || typeof data.Sender !== "number" || data.Sender === Player.MemberNumber || isAuraExempt(data.Sender) || !x4("LSCG")) return next(args);
       if (data.Content !== "LSCGMsg") return next(args);
       const sender = O3(data.Sender);
       const lscgMessage = data.Dictionary?.[0]?.message;
