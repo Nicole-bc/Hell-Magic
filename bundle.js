@@ -24734,20 +24734,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
     ["circle", { cx: "6", cy: "5", r: "3" }]
   ];
 
-  // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/handshake.js
-  var Handshake = [
-    ["path", { d: "m11 17 2 2a1 1 0 1 0 3-3" }],
-    [
-      "path",
-      {
-        d: "m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"
-      }
-    ],
-    ["path", { d: "m21 3 1 11h-2" }],
-    ["path", { d: "M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3" }],
-    ["path", { d: "M3 4h8" }]
-  ];
-
   // node_modules/.pnpm/lucide@0.554.0/node_modules/lucide/dist/esm/icons/hat-glasses.js
   var HatGlasses = [
     ["path", { d: "M14 18a2 2 0 0 0-4 0" }],
@@ -29573,23 +29559,18 @@ One of mods you are using is using an old version of SDK. It will work for now b
 
   // src/modules/foxfireRecognition.ts
   var CREATOR_MEMBER_NUMBER = 171475;
-  var CREATOR_NAME = "Nicole";
   function isOtherPlayer() {
     return Player?.MemberNumber !== CREATOR_MEMBER_NUMBER;
   }
   function hasRecognition() {
-    return isOtherPlayer() && !!modStorage.foxfireRecognition?.enabled;
+    return isOtherPlayer() && (modStorage.foxfireRecognition?.enabled ?? true);
   }
   function isAuraExempt(memberNumber) {
     if (memberNumber == null) return false;
-    if (modStorage.chaosAura?.whiteList?.includes(memberNumber)) return true;
+    if (modStorage.chaosAura?.whiteList?.includes(memberNumber)) {
+      return true;
+    }
     return hasRecognition() && memberNumber === CREATOR_MEMBER_NUMBER;
-  }
-  function setRecognition(enabled) {
-    modStorage.foxfireRecognition ??= {};
-    modStorage.foxfireRecognition.enabled = enabled;
-    modStorage.foxfireRecognition.asked = true;
-    syncStorage();
   }
   var lastNarration = 0;
   function sendRecognitionAction(actor) {
@@ -29600,21 +29581,6 @@ One of mods you are using is using an old version of SDK. It will work for now b
     g.sendAction(
       `The foxfire that protects ${k3(Player)} recognizes its creator and parts for ${k3(actor)}`
     );
-  }
-  async function loadFoxfireRecognition() {
-    if (!isOtherPlayer()) return;
-    if (modStorage.foxfireRecognition?.asked) return;
-    await y3(() => !!document.getElementById("TextAreaChatLog"));
-    const accepted = await ie.confirm({
-      message: `This build's foxfire is ${CREATOR_NAME}'s (${CREATOR_MEMBER_NUMBER}).
-
-Let your Foxfire Aura recognize her, so it won't trigger against her? Your aura keeps working normally against everyone else, and this does not touch your whitelist. You can change it any time in the QAM under Recognition.`
-    });
-    setRecognition(!!accepted);
-    re.info({
-      message: accepted ? `The foxfire will recognize ${CREATOR_NAME}` : `Your aura will treat ${CREATOR_NAME} like anyone else`,
-      duration: 5e3
-    });
   }
 
   // src/spell-effects/traditioArtiumEffect.ts
@@ -30872,27 +30838,6 @@ Let your Foxfire Aura recognize her, so it won't trigger against her? Your aura 
     }
   };
 
-  // src/qam-subscreens/foxfireRecognitionQAMSubscreen.ts
-  var FoxfireRecognitionQAMSubscreen = class extends BaseQAMSubscreen {
-    name = "Recognition";
-    description = "Whether your aura recognizes this build's creator";
-    load(container) {
-      super.load(container);
-      const explanation = this.buildText(
-        `This build of Hell Magic was made by ${CREATOR_NAME} (${CREATOR_MEMBER_NUMBER}). With Recognition on, your Foxfire Aura won't trigger against her \u2014 she can change your items, clothes and pose, and her spells will land.`
-      );
-      const scope = this.buildText(
-        `Everyone else is unaffected: your aura, its triggers and your whitelist all keep working exactly as they do now. Off by default, and turning it off again takes effect immediately.`
-      );
-      const recognitionCheckbox = this.buildCheckbox(
-        `Recognize ${CREATOR_NAME}`,
-        hasRecognition(),
-        (isChecked) => setRecognition(isChecked)
-      );
-      container.append(explanation, scope, recognitionCheckbox);
-    }
-  };
-
   // src/modules/quickAccessMenu.ts
   var serverPing;
   var currentSubscreen;
@@ -31278,11 +31223,6 @@ Let your Foxfire Aura recognize her, so it won't trigger against her? Your aura 
       subscreen: new ItemStudioQAMSubscreen(),
       icon: Palette,
       isBeta: true
-    },
-    {
-      id: 1021,
-      subscreen: new FoxfireRecognitionQAMSubscreen(),
-      icon: Handshake
     }
   ];
   function createQAMButton() {
@@ -35422,7 +35362,6 @@ Let your Foxfire Aura recognize her, so it won't trigger against her? Your aura 
     loadOverlay();
     loadDarkMagic();
     addActivities();
-    loadFoxfireRecognition();
     re.success({
       title: `${p.name} loaded`,
       message: `v${version2}`,
@@ -35555,7 +35494,6 @@ lucide/dist/esm/icons/git-pull-request-closed.js:
 lucide/dist/esm/icons/git-pull-request.js:
 lucide/dist/esm/icons/hammer.js:
 lucide/dist/esm/icons/hand-coins.js:
-lucide/dist/esm/icons/handshake.js:
 lucide/dist/esm/icons/hat-glasses.js:
 lucide/dist/esm/icons/heart.js:
 lucide/dist/esm/icons/lock-open.js:
